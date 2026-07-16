@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+dist/
+.next/
+out/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.local
+apps/api/data/workflows/*.json
+!apps/api/data/workflows/.gitkeep
+.DS_Store
+*.log

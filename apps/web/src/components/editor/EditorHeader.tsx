@@ -38,8 +38,16 @@ export function EditorHeader() {
   return (
     <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
       <div className="flex items-center gap-4">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
-          ← Workflows
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted transition hover:bg-background hover:text-foreground"
+          title="Back to workflows"
+          aria-label="Back to workflows"
+        >
+          <span className="material-icons text-[20px] leading-none">
+            arrow_back
+          </span>
+          <span>Workflows</span>
         </Link>
         <Input
           className="w-64"

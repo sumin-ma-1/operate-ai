@@ -77,7 +77,7 @@ export function PropertyPanel() {
             onClick={() => setEdgeDisabled(selectedEdge.id, !disabled)}
             className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
-            <span>Enabled</span>
+            <span>{disabled ? "Disabled" : "Enabled"}</span>
             <span
               className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                 disabled ? "bg-slate-600" : "bg-primary"

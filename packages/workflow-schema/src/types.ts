@@ -27,6 +27,7 @@ export interface WorkflowEdge {
   target: string;
   sourceHandle?: string | null;
   targetHandle?: string | null;
+  disabled?: boolean;
 }
 
 export interface WorkflowDefinition {

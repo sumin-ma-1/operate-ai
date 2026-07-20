@@ -18,24 +18,39 @@ import { useWorkflowStore } from "@/stores/workflowStore";
 function WorkflowCanvas() {
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
+  const selectedEdgeId = useWorkflowStore((state) => state.selectedEdgeId);
   const onNodesChange = useWorkflowStore((state) => state.onNodesChange);
   const onEdgesChange = useWorkflowStore((state) => state.onEdgesChange);
   const onConnect = useWorkflowStore((state) => state.onConnect);
   const selectNode = useWorkflowStore((state) => state.selectNode);
+  const selectEdge = useWorkflowStore((state) => state.selectEdge);
+
+  const edgesWithSelection = edges.map((edge) => ({
+    ...edge,
+    selected: edge.id === selectedEdgeId,
+  }));
 
   return (
     <ReactFlow
       nodes={nodes}
-      edges={edges}
+      edges={edgesWithSelection}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeClick={(_, node) => selectNode(node.id)}
-      onPaneClick={() => selectNode(null)}
+      onEdgeClick={(_, edge) => selectEdge(edge.id)}
+      onPaneClick={() => {
+        selectNode(null);
+        selectEdge(null);
+      }}
       onNodesDelete={() => selectNode(null)}
+      onEdgesDelete={() => selectEdge(null)}
       deleteKeyCode={["Backspace", "Delete"]}
       nodeTypes={nodeTypes}
       fitView
+      defaultEdgeOptions={{
+        style: { stroke: "#60a5fa" },
+      }}
     >
       <Background gap={16} size={1} />
       <Controls />

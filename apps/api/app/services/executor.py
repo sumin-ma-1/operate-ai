@@ -14,6 +14,9 @@ class DAGExecutor:
     def __init__(self, ollama_service: OllamaService | None = None) -> None:
         self.ollama = ollama_service or OllamaService()
 
+    def _active_edges(self, edges: list) -> list:
+        return [edge for edge in edges if not getattr(edge, "disabled", False)]
+
     def _topological_sort(
         self, nodes: list[WorkflowNode], edges: list
     ) -> list[WorkflowNode]:
@@ -21,7 +24,7 @@ class DAGExecutor:
         in_degree: dict[str, int] = {node.id: 0 for node in nodes}
         adjacency: dict[str, list[str]] = defaultdict(list)
 
-        for edge in edges:
+        for edge in self._active_edges(edges):
             if edge.source in node_map and edge.target in node_map:
                 adjacency[edge.source].append(edge.target)
                 in_degree[edge.target] += 1
@@ -45,7 +48,7 @@ class DAGExecutor:
     def _get_upstream_output(
         self, node_id: str, edges: list, node_outputs: dict[str, str]
     ) -> str:
-        for edge in edges:
+        for edge in self._active_edges(edges):
             if edge.target == node_id and edge.source in node_outputs:
                 return node_outputs[edge.source]
         return ""

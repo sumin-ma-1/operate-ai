@@ -34,6 +34,7 @@ class WorkflowEdge(BaseModel):
     target: str
     source_handle: Optional[str] = Field(default=None, alias="sourceHandle")
     target_handle: Optional[str] = Field(default=None, alias="targetHandle")
+    disabled: Optional[bool] = False
 
     model_config = {"populate_by_name": True}
 

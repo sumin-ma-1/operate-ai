@@ -17,8 +17,54 @@ body {
   @apply bg-background text-foreground antialiased;
 }
 
+.react-flow {
+  background: hsl(var(--background)) !important;
+}
+
 .react-flow__node {
-  @apply rounded-lg border border-border bg-card shadow-lg;
+  overflow: hidden !important;
+  border-radius: 0.5rem !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3) !important;
+  text-align: left !important;
+  box-sizing: border-box !important;
+}
+
+.react-flow__node > div {
+  text-align: left !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.react-flow__node-input,
+.react-flow__node-output {
+  width: 320px !important;
+  max-width: 320px !important;
+}
+
+.react-flow__node-llm {
+  width: 220px !important;
+  max-width: 220px !important;
+}
+
+.react-flow__node-input {
+  border-color: rgb(56 189 248) !important; /* sky-400 */
+}
+
+.react-flow__node-llm {
+  border-color: rgb(167 139 250) !important; /* violet-400 */
+}
+
+.react-flow__node-output {
+  border-color: rgb(52 211 153) !important; /* emerald-400 */
+}
+
+.react-flow__node .text-muted {
+  color: hsl(var(--muted)) !important;
 }
 
 .react-flow__handle {

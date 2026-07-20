@@ -10,13 +10,17 @@ type OutputNodeType = Node<WorkflowNodeData, "output">;
 
 export function OutputNode({ data, selected }: NodeProps<OutputNodeType>) {
   return (
-    <div className={`min-w-[220px] p-3 ${selected ? "ring-2 ring-primary" : ""}`}>
+    <div
+      className={`box-border w-full max-w-full overflow-hidden p-3 text-left ${
+        selected ? "ring-2 ring-emerald-400" : ""
+      }`}
+    >
       <Handle type="target" position={Position.Left} />
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-400">
         Output
       </div>
-      <div className="text-sm font-medium">{data.label}</div>
-      <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs text-muted">
+      <div className="truncate text-sm font-medium">{data.label}</div>
+      <p className="mt-2 max-w-full overflow-hidden break-words text-xs text-muted [overflow-wrap:anywhere] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:4]">
         {data.result || "Run workflow to see output"}
       </p>
     </div>

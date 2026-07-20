@@ -10,12 +10,16 @@ type InputNodeType = Node<WorkflowNodeData, "input">;
 
 export function InputNode({ data, selected }: NodeProps<InputNodeType>) {
   return (
-    <div className={`min-w-[200px] p-3 ${selected ? "ring-2 ring-primary" : ""}`}>
+    <div
+      className={`box-border w-full max-w-full overflow-hidden p-3 text-left ${
+        selected ? "ring-2 ring-sky-400" : ""
+      }`}
+    >
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-sky-400">
         Input
       </div>
-      <div className="text-sm font-medium">{data.label}</div>
-      <p className="mt-2 line-clamp-3 text-xs text-muted">
+      <div className="truncate text-sm font-medium">{data.label}</div>
+      <p className="mt-2 max-w-full overflow-hidden break-words text-xs text-muted [overflow-wrap:anywhere] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:4]">
         {data.value || "Enter text in property panel"}
       </p>
       <Handle type="source" position={Position.Right} />

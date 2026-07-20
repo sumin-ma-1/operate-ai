@@ -47,14 +47,20 @@ function WorkflowCanvas() {
       onEdgesDelete={() => selectEdge(null)}
       deleteKeyCode={["Backspace", "Delete"]}
       nodeTypes={nodeTypes}
+      colorMode="dark"
       fitView
       defaultEdgeOptions={{
         style: { stroke: "#60a5fa" },
       }}
     >
-      <Background gap={16} size={1} />
+      <Background gap={16} size={1} color="#334155" />
       <Controls />
-      <MiniMap pannable zoomable />
+      <MiniMap
+        pannable
+        zoomable
+        maskColor="rgb(15 23 42 / 0.7)"
+        nodeColor="#1e293b"
+      />
     </ReactFlow>
   );
 }

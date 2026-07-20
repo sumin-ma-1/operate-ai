@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { RotatingTagline } from "@/components/home/RotatingTagline";
 import { deleteWorkflow, fetchWorkflows } from "@/lib/workflow-api";
 import type { WorkflowSummary } from "@operate-ai/workflow-schema";
 
@@ -36,55 +37,86 @@ export default function HomePage() {
     await loadWorkflows();
   };
 
+  const isEmpty = !loading && !error && workflows.length === 0;
+
   return (
-    <main className="mx-auto min-h-screen max-w-5xl p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Operate-AI</h1>
-          <p className="mt-2 text-muted">
-            Visual editor for AI agents and LLM workflows
-          </p>
+    <div className="space-backdrop min-h-screen">
+      <main
+        className={`mx-auto flex min-h-screen max-w-6xl flex-col px-8 ${
+          isEmpty ? "justify-center pb-8" : "pb-10 pt-8"
+        }`}
+      >
+      <div
+        className={`flex flex-col items-center text-center ${
+          isEmpty ? "" : "pt-[12vh]"
+        }`}
+      >
+        <h1 className="text-3xl font-bold">Operate AI</h1>
+        <RotatingTagline />
+        <div className="mt-6">
+          <Link href="/editor/new">
+            <Button className="!rounded-full px-6 py-2.5 shadow-[0_0_20px_rgba(59,130,246,0.35)] transition duration-300 hover:shadow-[0_0_28px_rgba(59,130,246,0.55)] hover:!opacity-100">
+              New Workflow
+            </Button>
+          </Link>
         </div>
-        <Link href="/editor/new">
-          <Button>New Workflow</Button>
-        </Link>
       </div>
 
-      {loading && <p className="text-muted">Loading workflows...</p>}
-      {error && (
-        <p className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
-          {error}
-        </p>
-      )}
+      {!isEmpty && (
+        <section className="mt-10">
+          {loading && (
+            <p className="text-center text-muted">Loading workflows...</p>
+          )}
+          {error && (
+            <p className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+              {error}
+            </p>
+          )}
 
-      {!loading && !error && workflows.length === 0 && (
-        <Card>
-          <p className="text-sm text-muted">No workflows yet. Create your first one.</p>
-        </Card>
+          {/*
+            Columns by screen size (Tailwind breakpoints):
+            - default: 1
+            - sm (640px+): 2
+            - lg (1024px+): 3
+            - xl (1280px+): 4
+            Change grid-cols-* below to adjust.
+          */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {workflows.map((workflow) => (
+            <Card
+              key={workflow.id}
+              className="flex flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm"
+            >
+                <div>
+                  <h2 className="text-lg font-semibold">{workflow.name}</h2>
+                  {workflow.updatedAt && (
+                    <p className="mt-1 text-xs text-muted">
+                      Updated: {new Date(workflow.updatedAt).toLocaleString()}
+                    </p>
+                  )}
+                  {workflow.createdAt && (
+                    <p className="mt-0.5 text-xs text-muted">
+                      Created: {new Date(workflow.createdAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Link href={`/editor/${workflow.id}`}>
+                    <Button variant="secondary">Open</Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleDelete(workflow.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
       )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {workflows.map((workflow) => (
-          <Card key={workflow.id} className="flex flex-col gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">{workflow.name}</h2>
-              {workflow.updatedAt && (
-                <p className="mt-1 text-xs text-muted">
-                  Updated: {new Date(workflow.updatedAt).toLocaleString()}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Link href={`/editor/${workflow.id}`}>
-                <Button variant="secondary">Open</Button>
-              </Link>
-              <Button variant="ghost" onClick={() => handleDelete(workflow.id)}>
-                Delete
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

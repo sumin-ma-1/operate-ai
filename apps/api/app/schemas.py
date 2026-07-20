@@ -75,6 +75,7 @@ class ExecuteWorkflowResponse(BaseModel):
 class WorkflowSummary(BaseModel):
     id: str
     name: str
+    created_at: Optional[str] = Field(default=None, alias="createdAt")
     updated_at: Optional[str] = Field(default=None, alias="updatedAt")
 
     model_config = {"populate_by_name": True}

@@ -23,6 +23,7 @@ class WorkflowStore:
                 WorkflowSummary(
                     id=data["id"],
                     name=data.get("name", "Untitled"),
+                    createdAt=data.get("createdAt"),
                     updatedAt=data.get("updatedAt"),
                 )
             )

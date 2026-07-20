@@ -66,5 +66,6 @@ export interface OllamaModel {
 export interface WorkflowSummary {
   id: string;
   name: string;
+  createdAt?: string;
   updatedAt?: string;
 }

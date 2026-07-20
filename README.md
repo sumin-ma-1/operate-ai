@@ -1,4 +1,4 @@
-# Operate-AI
+# Operate AI
 
 Visual editor for AI agents and LLM workflows. Build node-based workflows and execute them against local Ollama models.
 

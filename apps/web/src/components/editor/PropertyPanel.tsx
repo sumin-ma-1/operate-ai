@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -45,7 +46,7 @@ export function PropertyPanel() {
       selectedEdge.target;
 
     return (
-      <aside className="w-72 overflow-y-auto border-l border-border bg-card p-4">
+      <div>
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold">Properties</h2>
@@ -95,25 +96,18 @@ export function PropertyPanel() {
             execution.
           </p>
         </div>
-      </aside>
+      </div>
     );
   }
 
   if (!selectedNode) {
-    return (
-      <aside className="w-72 border-l border-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Properties</h2>
-        <p className="mt-4 text-sm text-muted">
-          Select a node or connection to edit its properties.
-        </p>
-      </aside>
-    );
+    return null;
   }
 
   const { id, type, data } = selectedNode;
 
   return (
-    <aside className="w-72 overflow-y-auto border-l border-border bg-card p-4">
+    <div>
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold">Properties</h2>
@@ -178,11 +172,22 @@ export function PropertyPanel() {
 
         {type === "output" && (
           <div>
-            <label className="mb-1 block text-xs text-muted">Result</label>
-            <Textarea rows={8} readOnly value={data.result || ""} />
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="block text-xs text-muted">Result</label>
+              <OutputActions
+                content={data.result || ""}
+                filename={`${data.label || "output"}.txt`}
+              />
+            </div>
+            <Textarea
+              rows={16}
+              readOnly
+              className="scrollbar-soft"
+              value={data.result || ""}
+            />
           </div>
         )}
       </div>
-    </aside>
+    </div>
   );
 }

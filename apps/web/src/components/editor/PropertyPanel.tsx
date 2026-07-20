@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -12,6 +13,7 @@ export function PropertyPanel() {
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
   const nodes = useWorkflowStore((state) => state.nodes);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const removeNode = useWorkflowStore((state) => state.removeNode);
   const [models, setModels] = useState<string[]>(["llama3"]);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
@@ -41,8 +43,19 @@ export function PropertyPanel() {
 
   return (
     <aside className="w-72 overflow-y-auto border-l border-border bg-card p-4">
-      <h2 className="text-sm font-semibold">Properties</h2>
-      <p className="mt-1 text-xs uppercase text-muted">{type}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-semibold">Properties</h2>
+          <p className="mt-1 text-xs uppercase text-muted">{type}</p>
+        </div>
+        <Button
+          variant="ghost"
+          className="shrink-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+          onClick={() => removeNode(id)}
+        >
+          Delete
+        </Button>
+      </div>
 
       <div className="mt-4 space-y-4">
         <div>

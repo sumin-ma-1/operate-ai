@@ -32,6 +32,8 @@ function WorkflowCanvas() {
       onConnect={onConnect}
       onNodeClick={(_, node) => selectNode(node.id)}
       onPaneClick={() => selectNode(null)}
+      onNodesDelete={() => selectNode(null)}
+      deleteKeyCode={["Backspace", "Delete"]}
       nodeTypes={nodeTypes}
       fitView
     >

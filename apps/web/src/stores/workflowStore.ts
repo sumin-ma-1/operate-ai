@@ -36,6 +36,7 @@ interface WorkflowState {
   selectNode: (nodeId: string | null) => void;
   addNode: (type: WorkflowNodeType) => void;
   updateNodeData: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
+  removeNode: (nodeId: string) => void;
   loadWorkflow: (workflow: WorkflowDefinition) => void;
   toWorkflowDefinition: () => WorkflowDefinition;
   setRunning: (isRunning: boolean) => void;
@@ -117,6 +118,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           ? { ...node, data: { ...node.data, ...data } }
           : node
       ),
+    })),
+
+  removeNode: (nodeId) =>
+    set((state) => ({
+      nodes: state.nodes.filter((node) => node.id !== nodeId),
+      edges: state.edges.filter(
+        (edge) => edge.source !== nodeId && edge.target !== nodeId
+      ),
+      selectedNodeId:
+        state.selectedNodeId === nodeId ? null : state.selectedNodeId,
     })),
 
   loadWorkflow: (workflow) =>

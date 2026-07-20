@@ -85,22 +85,31 @@ export default function HomePage() {
             {workflows.map((workflow) => (
             <Card
               key={workflow.id}
-              className="flex flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm"
+              className="flex h-full flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:shadow-[0_0_20px_rgba(56,189,248,0.12)]"
             >
-                <div>
+                <div className="flex-1">
                   <h2 className="text-lg font-semibold">{workflow.name}</h2>
-                  {workflow.updatedAt && (
-                    <p className="mt-1 text-xs text-muted">
-                      Updated: {new Date(workflow.updatedAt).toLocaleString()}
-                    </p>
-                  )}
+                  {workflow.updatedAt &&
+                    workflow.updatedAt !== workflow.createdAt && (
+                      <p className="mt-1 text-xs text-muted">
+                        Updated:{" "}
+                        {new Date(workflow.updatedAt).toLocaleString()}
+                      </p>
+                    )}
                   {workflow.createdAt && (
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p
+                      className={`text-xs text-muted ${
+                        workflow.updatedAt &&
+                        workflow.updatedAt !== workflow.createdAt
+                          ? "mt-0.5"
+                          : "mt-1"
+                      }`}
+                    >
                       Created: {new Date(workflow.createdAt).toLocaleString()}
                     </p>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="mt-auto flex gap-2">
                   <Link href={`/editor/${workflow.id}`}>
                     <Button variant="secondary">Open</Button>
                   </Link>

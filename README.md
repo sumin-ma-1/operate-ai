@@ -1,5 +1,5 @@
 <h1 align="left">
-  <img src="retro_spaceship_thruster.gif" width="48" height="48" alt="Operate AI" style="vertical-align: middle; margin-right: 8px;" />
+  <img src="/apps/web/public/retro_spaceship_thruster.gif" width="48" height="48" alt="Operate AI" style="vertical-align: middle; margin-right: 8px;" />
   Operate AI
 </h1>
 

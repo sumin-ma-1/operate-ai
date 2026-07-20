@@ -15,7 +15,11 @@ app = FastAPI(title="Operate-AI API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|100\.\d+\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,7 +50,13 @@ async def list_models() -> dict:
     response_model_by_alias=True,
 )
 async def execute_workflow(request: ExecuteWorkflowRequest) -> ExecuteWorkflowResponse:
-    return await executor.execute(request)
+    try:
+        return await executor.execute(request)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Workflow execution failed: {exc}",
+        ) from exc
 
 
 @app.get(

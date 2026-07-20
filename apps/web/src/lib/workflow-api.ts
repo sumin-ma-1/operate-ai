@@ -9,14 +9,43 @@ import type {
 import { getApiUrl } from "./api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(getApiUrl(path), {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const url = getApiUrl(path);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "Network error";
+    throw new Error(
+      `Failed to reach API at ${url}. Is the API running on port 8000? (${reason})`
+    );
+  }
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(error || `Request failed: ${response.status}`);
+    let message = error || `Request failed: ${response.status}`;
+    try {
+      const parsed = JSON.parse(error) as {
+        detail?: string | Array<{ msg?: string }>;
+      };
+      if (typeof parsed.detail === "string") {
+        message = parsed.detail;
+      } else if (Array.isArray(parsed.detail)) {
+        const messages = parsed.detail
+          .map((item) => item.msg)
+          .filter(Boolean)
+          .join("; ");
+        if (messages) {
+          message = messages;
+        }
+      }
+    } catch {
+      // keep raw error text
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;

@@ -1,5 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/backend";
 
 export function getApiUrl(path: string): string {
-  return `${API_URL}${path}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_URL.replace(/\/$/, "")}${normalizedPath}`;
 }

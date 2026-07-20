@@ -30,6 +30,13 @@ class OllamaService:
                 f"{self.base_url}/api/chat",
                 json={"model": model, "messages": messages, "stream": False},
             )
-            response.raise_for_status()
+            if response.status_code == 404:
+                raise ValueError(
+                    f"Ollama model '{model}' not found. "
+                    f"Pull it with `ollama pull {model}` or pick an installed model."
+                )
+            if response.is_error:
+                detail = response.text.strip() or response.reason_phrase
+                raise ValueError(f"Ollama error ({response.status_code}): {detail}")
             data = response.json()
             return data.get("message", {}).get("content", "")

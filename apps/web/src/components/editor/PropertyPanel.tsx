@@ -18,7 +18,7 @@ export function PropertyPanel() {
   const removeNode = useWorkflowStore((state) => state.removeNode);
   const removeEdge = useWorkflowStore((state) => state.removeEdge);
   const setEdgeDisabled = useWorkflowStore((state) => state.setEdgeDisabled);
-  const [models, setModels] = useState<string[]>(["llama3"]);
+  const [models, setModels] = useState<string[]>(["gemma4:e4b"]);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
   const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
@@ -31,7 +31,7 @@ export function PropertyPanel() {
         }
       })
       .catch(() => {
-        setModels(["llama3"]);
+        setModels(["gemma4:e4b"]);
       });
   }, []);
 
@@ -153,7 +153,7 @@ export function PropertyPanel() {
             <div>
               <label className="mb-1 block text-xs text-muted">Model</label>
               <Select
-                value={data.model || "llama3"}
+                value={data.model || "gemma4:e4b"}
                 onChange={(event) => updateNodeData(id, { model: event.target.value })}
               >
                 {models.map((model) => (

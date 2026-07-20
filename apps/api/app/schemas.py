@@ -11,7 +11,7 @@ class WorkflowNodePosition(BaseModel):
 class WorkflowNodeData(BaseModel):
     label: str
     value: Optional[str] = None
-    model: Optional[str] = "llama3"
+    model: Optional[str] = "gemma4:e4b"
     system_prompt: Optional[str] = Field(default=None, alias="systemPrompt")
     user_prompt_template: Optional[str] = Field(
         default="{{input}}", alias="userPromptTemplate"

@@ -17,7 +17,7 @@ export function LlmNode({ data, selected }: NodeProps<LlmNodeType>) {
       </div>
       <div className="text-sm font-medium">{data.label}</div>
       <div className="mt-2 space-y-1 text-xs text-muted">
-        <p>Model: {data.model || "llama3"}</p>
+        <p className="truncate">Model: {data.model || "gemma4:e4b"}</p>
         <p className="line-clamp-2">
           Prompt: {data.userPromptTemplate || "{{input}}"}
         </p>

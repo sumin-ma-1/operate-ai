@@ -88,7 +88,7 @@ function createDefaultNode(type: WorkflowNodeType): WorkflowNode {
         ...base,
         data: {
           label: "LLM",
-          model: "llama3",
+          model: "gemma4:e4b",
           systemPrompt: "You are a helpful assistant.",
           userPromptTemplate: "{{input}}",
         },

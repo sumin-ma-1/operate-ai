@@ -48,7 +48,7 @@ cp apps/web/.env.example apps/web/.env.local
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API URL |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | FastAPI URL for the web app |
+| `NEXT_PUBLIC_API_URL` | `/backend` | Web app API base (Next.js proxies to FastAPI on `:8000`) |
 
 ### 3. Start Ollama
 
@@ -56,14 +56,14 @@ cp apps/web/.env.example apps/web/.env.local
 
 ```bash
 docker compose up -d ollama
-docker exec -it operate-ai-ollama ollama pull llama3
+docker exec -it operate-ai-ollama ollama pull gemma4:e4b
 ```
 
 **Option B: Local Ollama**
 
 ```bash
 ollama serve
-ollama pull llama3
+ollama pull gemma4:e4b
 ```
 
 ### 4. Start the API

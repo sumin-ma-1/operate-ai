@@ -81,12 +81,21 @@ class DAGExecutor:
                 )
                 template = node.data.user_prompt_template or "{{input}}"
                 user_prompt = template.replace("{{input}}", upstream)
+                model = node.data.model or "gemma4:e4b"
 
-                output = await self.ollama.chat(
-                    model=node.data.model or "llama3",
-                    user_message=user_prompt,
-                    system_message=node.data.system_prompt,
-                )
+                try:
+                    output = await self.ollama.chat(
+                        model=model,
+                        user_message=user_prompt,
+                        system_message=node.data.system_prompt,
+                    )
+                except Exception as exc:
+                    return ExecuteWorkflowResponse(
+                        success=False,
+                        node_results=node_results,
+                        final_output="",
+                        error=str(exc),
+                    )
 
             elif node.type == "output":
                 output = self._get_upstream_output(

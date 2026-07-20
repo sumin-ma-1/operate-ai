@@ -68,16 +68,23 @@ export function RunPanel() {
           <div>
             <h4 className="text-xs font-semibold uppercase text-muted">Node Logs</h4>
             <div className="mt-2 max-h-32 space-y-2 overflow-auto">
-              {lastResult.nodeResults.map((result) => (
-                <div
-                  key={result.nodeId}
-                  className="rounded-md border border-border bg-background p-2 text-xs"
-                >
-                  <span className="font-medium">{result.nodeType}</span>
-                  <span className="text-muted"> ({result.nodeId})</span>
-                  <p className="mt-1 line-clamp-2 text-muted">{result.output}</p>
-                </div>
-              ))}
+              {lastResult.nodeResults.map((result) => {
+                const label =
+                  nodes.find((node) => node.id === result.nodeId)?.data.label ||
+                  result.nodeType;
+                const typeLabel = result.nodeType.toUpperCase();
+
+                return (
+                  <div
+                    key={result.nodeId}
+                    className="rounded-md border border-border bg-background p-2 text-xs"
+                  >
+                    <span className="font-medium">{label}</span>
+                    <span className="text-muted"> ({typeLabel})</span>
+                    <p className="mt-1 line-clamp-2 text-muted">{result.output}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

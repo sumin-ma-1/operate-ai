@@ -1,4 +1,7 @@
-# Operate AI
+<h1 align="left">
+  <img src="retro_spaceship_thruster.gif" width="48" height="48" alt="Operate AI" style="vertical-align: middle; margin-right: 8px;" />
+  Operate AI
+</h1>
 
 Visual editor for AI agents and LLM workflows. Build node-based workflows and execute them against local Ollama models.
 

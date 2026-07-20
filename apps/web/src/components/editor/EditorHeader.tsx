@@ -55,9 +55,6 @@ export function EditorHeader() {
           onChange={(event) => setWorkflowMeta(workflowId, event.target.value)}
           placeholder="Workflow name"
         />
-        {workflowId && (
-          <span className="text-xs text-muted">ID: {workflowId}</span>
-        )}
       </div>
       <div className="flex items-center gap-3">
         {message && <span className="text-xs text-muted">{message}</span>}

@@ -76,11 +76,9 @@ class DAGExecutor:
                 output = request.input or node.data.value or ""
 
             elif node.type == "llm":
-                upstream = self._get_upstream_output(
+                user_prompt = self._get_upstream_output(
                     node.id, workflow.edges, node_outputs
                 )
-                template = node.data.user_prompt_template or "{{input}}"
-                user_prompt = template.replace("{{input}}", upstream)
                 model = node.data.model or "gemma4:e4b"
 
                 try:

@@ -173,17 +173,6 @@ export function PropertyPanel() {
                 }
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted">User Prompt Template</label>
-              <Textarea
-                rows={4}
-                value={data.userPromptTemplate || "{{input}}"}
-                onChange={(event) =>
-                  updateNodeData(id, { userPromptTemplate: event.target.value })
-                }
-              />
-              <p className="mt-1 text-xs text-muted">Use {"{{input}}"} for upstream output.</p>
-            </div>
           </>
         )}
 

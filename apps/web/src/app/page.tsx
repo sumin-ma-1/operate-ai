@@ -68,7 +68,6 @@ export default function HomePage() {
           <Card key={workflow.id} className="flex flex-col gap-3">
             <div>
               <h2 className="text-lg font-semibold">{workflow.name}</h2>
-              <p className="text-xs text-muted">ID: {workflow.id}</p>
               {workflow.updatedAt && (
                 <p className="mt-1 text-xs text-muted">
                   Updated: {new Date(workflow.updatedAt).toLocaleString()}

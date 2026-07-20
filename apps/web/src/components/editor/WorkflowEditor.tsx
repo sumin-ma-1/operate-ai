@@ -58,8 +58,22 @@ function WorkflowCanvas() {
       <MiniMap
         pannable
         zoomable
-        maskColor="rgb(15 23 42 / 0.7)"
-        nodeColor="#1e293b"
+        maskColor="rgb(15 23 42 / 0.75)"
+        bgColor="hsl(217 33% 17%)"
+        nodeStrokeWidth={2}
+        nodeBorderRadius={4}
+        nodeColor={(node) => {
+          switch (node.type) {
+            case "input":
+              return "#38bdf8";
+            case "llm":
+              return "#a78bfa";
+            case "output":
+              return "#34d399";
+            default:
+              return "#94a3b8";
+          }
+        }}
       />
     </ReactFlow>
   );

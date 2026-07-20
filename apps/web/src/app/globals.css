@@ -41,11 +41,7 @@ body {
 }
 
 .react-flow__node-input,
-.react-flow__node-output {
-  width: 320px !important;
-  max-width: 320px !important;
-}
-
+.react-flow__node-output,
 .react-flow__node-llm {
   width: 220px !important;
   max-width: 220px !important;

@@ -123,7 +123,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Node | Description |
 |------|-------------|
 | **Input** | Workflow entry text |
-| **LLM** | Ollama chat completion (`{{input}}` placeholder supported) |
+| **LLM** | Ollama chat completion (previous node output is used as the user prompt) |
 | **Output** | Displays final result |
 
 ## Development Scripts

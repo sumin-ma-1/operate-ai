@@ -22,9 +22,6 @@ export function LlmNode({ data, selected }: NodeProps<LlmNodeType>) {
       <div className="truncate text-sm font-medium">{data.label}</div>
       <div className="mt-2 space-y-1 overflow-hidden text-xs text-muted">
         <p className="truncate">Model: {data.model || "gemma4:e4b"}</p>
-        <p className="line-clamp-2 break-words [overflow-wrap:anywhere]">
-          Prompt: {data.userPromptTemplate || "{{input}}"}
-        </p>
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

@@ -47,7 +47,7 @@ export function RunPanel() {
           </p>
         </div>
         <Button onClick={handleRun} disabled={isRunning || nodes.length === 0}>
-          {isRunning ? "Running..." : "Run"}
+          {isRunning ? "Running" : "Run"}
         </Button>
       </div>
 

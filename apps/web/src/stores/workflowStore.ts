@@ -90,7 +90,6 @@ function createDefaultNode(type: WorkflowNodeType): WorkflowNode {
           label: "LLM",
           model: "gemma4:e4b",
           systemPrompt: "You are a helpful assistant.",
-          userPromptTemplate: "{{input}}",
         },
       };
     case "output":

@@ -51,6 +51,13 @@ export default function HomePage() {
           isEmpty ? "" : "pt-[12vh]"
         }`}
       >
+        <img
+          src="/retro_spaceship_thruster.gif"
+          alt="Operate AI"
+          width={48}
+          height={48}
+          className="mb-3"
+        />
         <h1 className="text-3xl font-bold">Operate AI</h1>
         <RotatingTagline />
         <div className="mt-6">

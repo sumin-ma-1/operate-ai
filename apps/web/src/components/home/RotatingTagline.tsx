@@ -11,6 +11,7 @@ const TAGLINES = [
 ];
 
 const INTERVAL_MS = 11000;
+const FADE_MS = 1200;
 
 export function RotatingTagline() {
   const [index, setIndex] = useState(0);
@@ -22,7 +23,7 @@ export function RotatingTagline() {
       window.setTimeout(() => {
         setIndex((current) => (current + 1) % TAGLINES.length);
         setVisible(true);
-      }, 600);
+      }, FADE_MS);
     }, INTERVAL_MS);
 
     return () => window.clearInterval(timer);
@@ -30,7 +31,7 @@ export function RotatingTagline() {
 
   return (
     <p
-      className={`mt-2 min-h-[1.5rem] text-muted transition-opacity duration-700 ${
+      className={`mt-2 min-h-[1.5rem] text-muted transition-opacity duration-[1200ms] ease-in-out ${
         visible ? "opacity-100" : "opacity-0"
       }`}
     >

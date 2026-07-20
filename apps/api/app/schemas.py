@@ -8,9 +8,20 @@ class WorkflowNodePosition(BaseModel):
     y: float
 
 
+class WorkflowAttachment(BaseModel):
+    id: str
+    name: str
+    mime_type: str = Field(alias="mimeType")
+    kind: Literal["text", "image", "document"]
+    content: str
+
+    model_config = {"populate_by_name": True}
+
+
 class WorkflowNodeData(BaseModel):
     label: str
     value: Optional[str] = None
+    attachments: Optional[list[WorkflowAttachment]] = None
     model: Optional[str] = "gemma4:e4b"
     system_prompt: Optional[str] = Field(default=None, alias="systemPrompt")
     user_prompt_template: Optional[str] = Field(

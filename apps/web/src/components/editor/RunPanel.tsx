@@ -85,7 +85,7 @@ export function RunPanel() {
                 </h4>
                 <OutputActions
                   content={lastResult.finalOutput || ""}
-                  filename={`${workflowName || "output"}.txt`}
+                  filename={workflowName || "output"}
                 />
               </div>
               <pre className="scrollbar-soft mt-2 max-h-80 overflow-auto rounded-md border border-border bg-background p-3 text-sm whitespace-pre-wrap">

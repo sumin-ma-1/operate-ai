@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { InputAttachments } from "@/components/editor/InputAttachments";
 import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -132,14 +133,22 @@ export function PropertyPanel() {
         </div>
 
         {type === "input" && (
-          <div>
-            <label className="mb-1 block text-xs text-muted">Input Text</label>
-            <Textarea
-              rows={5}
-              value={data.value || ""}
-              onChange={(event) => updateNodeData(id, { value: event.target.value })}
+          <>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Input Text</label>
+              <Textarea
+                rows={5}
+                value={data.value || ""}
+                onChange={(event) =>
+                  updateNodeData(id, { value: event.target.value })
+                }
+              />
+            </div>
+            <InputAttachments
+              attachments={data.attachments || []}
+              onChange={(attachments) => updateNodeData(id, { attachments })}
             />
-          </div>
+          </>
         )}
 
         {type === "llm" && (
@@ -176,7 +185,7 @@ export function PropertyPanel() {
               <label className="block text-xs text-muted">Result</label>
               <OutputActions
                 content={data.result || ""}
-                filename={`${data.label || "output"}.txt`}
+                filename={data.label || "output"}
               />
             </div>
             <Textarea

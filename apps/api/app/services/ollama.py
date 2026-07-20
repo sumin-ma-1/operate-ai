@@ -19,11 +19,16 @@ class OllamaService:
         model: str,
         user_message: str,
         system_message: str | None = None,
+        images: list[str] | None = None,
     ) -> str:
-        messages: list[dict[str, str]] = []
+        messages: list[dict] = []
         if system_message:
             messages.append({"role": "system", "content": system_message})
-        messages.append({"role": "user", "content": user_message})
+
+        user_payload: dict = {"role": "user", "content": user_message}
+        if images:
+            user_payload["images"] = images
+        messages.append(user_payload)
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(

@@ -1,5 +1,15 @@
 export type WorkflowNodeType = "input" | "llm" | "output";
 
+export type WorkflowAttachmentKind = "text" | "image" | "document";
+
+export interface WorkflowAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  kind: WorkflowAttachmentKind;
+  content: string;
+}
+
 export interface WorkflowNodePosition {
   x: number;
   y: number;
@@ -8,6 +18,7 @@ export interface WorkflowNodePosition {
 export interface WorkflowNodeData extends Record<string, unknown> {
   label: string;
   value?: string;
+  attachments?: WorkflowAttachment[];
   model?: string;
   systemPrompt?: string;
   userPromptTemplate?: string;

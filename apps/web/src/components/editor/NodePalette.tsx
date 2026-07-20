@@ -13,7 +13,7 @@ const paletteItems: {
   label: string;
   description: string;
 }[] = [
-  { type: "input", label: "Input", description: "Workflow entry text" },
+  { type: "input", label: "Input", description: "Text and file attachments" },
   { type: "llm", label: "LLM", description: "Ollama model call" },
   { type: "output", label: "Output", description: "Display final result" },
 ];

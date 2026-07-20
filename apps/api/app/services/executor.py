@@ -7,6 +7,7 @@ from app.schemas import (
     WorkflowDefinition,
     WorkflowNode,
 )
+from app.services.input_content import build_input_text, collect_upstream_images
 from app.services.ollama import OllamaService
 
 
@@ -73,19 +74,34 @@ class DAGExecutor:
             output = ""
 
             if node.type == "input":
-                output = request.input or node.data.value or ""
+                try:
+                    output = build_input_text(node, request.input)
+                except ValueError as exc:
+                    return ExecuteWorkflowResponse(
+                        success=False,
+                        node_results=node_results,
+                        final_output="",
+                        error=str(exc),
+                    )
 
             elif node.type == "llm":
                 user_prompt = self._get_upstream_output(
                     node.id, workflow.edges, node_outputs
                 )
+                if not user_prompt:
+                    user_prompt = "Please analyze the attached input."
                 model = node.data.model or "gemma4:e4b"
+                active_edges = self._active_edges(workflow.edges)
+                images = collect_upstream_images(
+                    node.id, workflow.nodes, workflow.edges, active_edges
+                )
 
                 try:
                     output = await self.ollama.chat(
                         model=model,
                         user_message=user_prompt,
                         system_message=node.data.system_prompt,
+                        images=images or None,
                     )
                 except Exception as exc:
                     return ExecuteWorkflowResponse(

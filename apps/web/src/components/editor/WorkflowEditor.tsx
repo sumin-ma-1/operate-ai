@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import { AddNodeFab } from "@/components/editor/AddNodeFab";
 import { NodePalette } from "@/components/editor/NodePalette";
 import { RunPanel } from "@/components/editor/RunPanel";
 import { nodeTypes } from "@/components/editor/nodes";
@@ -82,10 +83,11 @@ export function WorkflowEditor() {
   return (
     <div className="flex h-full min-h-0">
       <NodePalette />
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <ReactFlowProvider>
           <WorkflowCanvas />
         </ReactFlowProvider>
+        <AddNodeFab />
       </div>
       <RunPanel />
     </div>

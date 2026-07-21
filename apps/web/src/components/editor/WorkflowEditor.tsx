@@ -10,8 +10,8 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { AddNodeFab } from "@/components/editor/AddNodeFab";
+import { ExecutionFab } from "@/components/editor/ExecutionFab";
 import { NodeInspector } from "@/components/editor/NodeInspector";
-import { RunPanel } from "@/components/editor/RunPanel";
 import { nodeTypes } from "@/components/editor/nodes";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
@@ -38,6 +38,7 @@ function WorkflowCanvas() {
 
   return (
     <ReactFlow
+      className="h-full w-full"
       nodes={nodesWithSelection}
       edges={edgesWithSelection}
       onNodesChange={onNodesChange}
@@ -60,10 +61,12 @@ function WorkflowCanvas() {
       }}
     >
       <Background gap={16} size={1} color="#334155" />
-      <Controls />
+      <Controls position="bottom-center" orientation="horizontal" />
       <MiniMap
         pannable
         zoomable
+        position="bottom-left"
+        style={{ left: 12, bottom: 12 }}
         maskColor="rgb(15 23 42 / 0.75)"
         bgColor="hsl(217 33% 17%)"
         nodeStrokeWidth={2}
@@ -88,14 +91,11 @@ function WorkflowCanvas() {
 
 export function WorkflowEditor() {
   return (
-    <div className="flex h-full min-h-0">
-      <div className="relative min-w-0 flex-1">
-        <ReactFlowProvider>
-          <WorkflowCanvas />
-        </ReactFlowProvider>
-        <AddNodeFab />
-      </div>
-      <RunPanel />
-    </div>
+    <ExecutionFab>
+      <ReactFlowProvider>
+        <WorkflowCanvas />
+      </ReactFlowProvider>
+      <AddNodeFab />
+    </ExecutionFab>
   );
 }

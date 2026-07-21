@@ -129,8 +129,15 @@ body {
   @apply !h-3 !w-3 !border-2 !border-primary !bg-background;
 }
 
-/* Zoom controls: body text is light, so default white buttons hide SVG icons */
+/* Zoom controls: horizontal bar centered at bottom */
 .react-flow__controls {
+  display: flex !important;
+  flex-direction: row !important;
+  bottom: 12px !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
   border: 1px solid hsl(var(--border)) !important;
   border-radius: 0.5rem !important;
   overflow: hidden;
@@ -139,7 +146,8 @@ body {
 
 .react-flow__controls-button {
   background: hsl(var(--card)) !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
+  border-bottom: none !important;
+  border-right: 1px solid hsl(var(--border)) !important;
   width: 28px !important;
   height: 28px !important;
 }
@@ -155,7 +163,7 @@ body {
 }
 
 .react-flow__controls-button:last-child {
-  border-bottom: none !important;
+  border-right: none !important;
 }
 
 .react-flow__minimap {

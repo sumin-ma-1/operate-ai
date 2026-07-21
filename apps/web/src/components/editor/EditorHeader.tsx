@@ -61,16 +61,16 @@ export function EditorHeader() {
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="inline-flex items-center gap-1.5 !rounded-full px-4 py-1.0"
+          className="inline-flex items-center gap-1.5 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-4 py-1.0 shadow-[0_2px_12px_rgba(99,102,241,0.22)] hover:shadow-[0_2px_14px_rgba(99,102,241,0.32)] hover:!opacity-100"
         >
           <span
             className={`material-icons text-[18px] leading-none ${
               isSaving ? "animate-spin" : ""
             }`}
           >
-            {isSaving ? "autorenew" : "save"}
+            {isSaving ? "autorenew" : "star"}
           </span>
-          {isSaving ? "Saving..." : "Save"}
+          {isSaving ? "Saving" : "Save"}
         </Button>
       </div>
     </header>

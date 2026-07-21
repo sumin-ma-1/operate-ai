@@ -10,7 +10,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { AddNodeFab } from "@/components/editor/AddNodeFab";
-import { NodePalette } from "@/components/editor/NodePalette";
+import { NodeInspector } from "@/components/editor/NodeInspector";
 import { RunPanel } from "@/components/editor/RunPanel";
 import { nodeTypes } from "@/components/editor/nodes";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -18,12 +18,18 @@ import { useWorkflowStore } from "@/stores/workflowStore";
 function WorkflowCanvas() {
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
+  const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
   const selectedEdgeId = useWorkflowStore((state) => state.selectedEdgeId);
   const onNodesChange = useWorkflowStore((state) => state.onNodesChange);
   const onEdgesChange = useWorkflowStore((state) => state.onEdgesChange);
   const onConnect = useWorkflowStore((state) => state.onConnect);
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const selectEdge = useWorkflowStore((state) => state.selectEdge);
+
+  const nodesWithSelection = nodes.map((node) => ({
+    ...node,
+    selected: node.id === selectedNodeId,
+  }));
 
   const edgesWithSelection = edges.map((edge) => ({
     ...edge,
@@ -32,7 +38,7 @@ function WorkflowCanvas() {
 
   return (
     <ReactFlow
-      nodes={nodes}
+      nodes={nodesWithSelection}
       edges={edgesWithSelection}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
@@ -75,6 +81,7 @@ function WorkflowCanvas() {
           }
         }}
       />
+      <NodeInspector />
     </ReactFlow>
   );
 }
@@ -82,7 +89,6 @@ function WorkflowCanvas() {
 export function WorkflowEditor() {
   return (
     <div className="flex h-full min-h-0">
-      <NodePalette />
       <div className="relative min-w-0 flex-1">
         <ReactFlowProvider>
           <WorkflowCanvas />

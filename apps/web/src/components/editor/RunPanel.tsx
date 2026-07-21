@@ -2,20 +2,31 @@
 
 import { useState } from "react";
 
+import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
 import { ResizeHandle } from "@/components/editor/ResizeHandle";
 import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
 import { useResizableWidth } from "@/hooks/useResizableWidth";
-import { executeWorkflow } from "@/lib/workflow-api";
+import { getExecutionMessage, getExecutionOrder } from "@/lib/execution-order";
+import { executeWorkflowStream } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 export function RunPanel() {
   const isRunning = useWorkflowStore((state) => state.isRunning);
   const lastResult = useWorkflowStore((state) => state.lastResult);
+  const executionProgress = useWorkflowStore((state) => state.executionProgress);
   const nodes = useWorkflowStore((state) => state.nodes);
+  const edges = useWorkflowStore((state) => state.edges);
   const workflowName = useWorkflowStore((state) => state.workflowName);
   const toWorkflowDefinition = useWorkflowStore((state) => state.toWorkflowDefinition);
   const setRunning = useWorkflowStore((state) => state.setRunning);
+  const setExecutionProgress = useWorkflowStore((state) => state.setExecutionProgress);
+  const updateExecutionProgress = useWorkflowStore(
+    (state) => state.updateExecutionProgress
+  );
+  const clearExecutionProgress = useWorkflowStore(
+    (state) => state.clearExecutionProgress
+  );
   const applyExecutionResults = useWorkflowStore((state) => state.applyExecutionResults);
   const [error, setError] = useState<string | null>(null);
   const { width, onResizeStart } = useResizableWidth({
@@ -31,12 +42,96 @@ export function RunPanel() {
 
   const handleRun = async () => {
     setError(null);
+    clearExecutionProgress();
     setRunning(true);
+
+    const orderedNodes = getExecutionOrder(
+      nodes.map((node) => ({
+        id: node.id,
+        type: node.type as "input" | "llm" | "output",
+        label: node.data.label,
+      })),
+      edges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        disabled: Boolean(edge.data?.disabled),
+      }))
+    );
+
+    const firstNode = orderedNodes[0];
+    setExecutionProgress(
+      orderedNodes.map((node) => ({
+        nodeId: node.id,
+        nodeType: node.type,
+        label: node.label,
+        status: node.id === firstNode?.id ? "running" : "pending",
+        message:
+          node.id === firstNode?.id
+            ? getExecutionMessage(
+                node.type,
+                nodes.find((item) => item.id === node.id)?.data.model
+              )
+            : undefined,
+      }))
+    );
 
     try {
       const workflow = toWorkflowDefinition();
-      const result = await executeWorkflow({ workflow, input: inputValue });
+      const result = await executeWorkflowStream(
+        { workflow, input: inputValue },
+        (event) => {
+          if (event.type === "started") {
+            setExecutionProgress(
+              event.nodes.map((node, index) => ({
+                nodeId: node.nodeId,
+                nodeType: node.nodeType,
+                label: node.label,
+                status: index === 0 ? "running" : "pending",
+                message:
+                  index === 0
+                    ? getExecutionMessage(
+                        node.nodeType,
+                        nodes.find((item) => item.id === node.nodeId)?.data.model
+                      )
+                    : undefined,
+              }))
+            );
+            return;
+          }
+
+          if (event.type === "node_started") {
+            const current = useWorkflowStore.getState().executionProgress;
+            setExecutionProgress(
+              current.map((item) =>
+                item.nodeId === event.nodeId
+                  ? { ...item, status: "running", message: event.message }
+                  : item.status === "running"
+                    ? { ...item, status: "pending", message: undefined }
+                    : item
+              )
+            );
+            return;
+          }
+
+          if (event.type === "node_completed") {
+            updateExecutionProgress(event.nodeId, {
+              status: "completed",
+              message: undefined,
+            });
+            return;
+          }
+
+          if (event.type === "node_failed") {
+            updateExecutionProgress(event.nodeId, {
+              status: "failed",
+              message: event.error,
+            });
+          }
+        }
+      );
+
       applyExecutionResults(result);
+      clearExecutionProgress();
 
       if (!result.success && result.error) {
         setError(result.error);
@@ -63,7 +158,18 @@ export function RunPanel() {
               Run the connected workflow against Ollama.
             </p>
           </div>
-          <Button onClick={handleRun} disabled={isRunning || nodes.length === 0}>
+          <Button
+            onClick={handleRun}
+            disabled={isRunning || nodes.length === 0}
+            className="inline-flex shrink-0 items-center gap-1.5 !rounded-full px-4 py-1.0"
+          >
+            <span
+              className={`material-icons text-[18px] leading-none ${
+                isRunning ? "animate-spin" : ""
+              }`}
+            >
+              {isRunning ? "autorenew" : "play_arrow"}
+            </span>
             {isRunning ? "Running" : "Run"}
           </Button>
         </div>
@@ -74,6 +180,10 @@ export function RunPanel() {
           <p className="shrink-0 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
             {error}
           </p>
+        )}
+
+        {isRunning && executionProgress.length > 0 && (
+          <ExecutionProgress items={executionProgress} />
         )}
 
         {lastResult ? (
@@ -121,9 +231,11 @@ export function RunPanel() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-muted">
-            Run the workflow to see output and logs here.
-          </p>
+          !isRunning && (
+            <p className="text-sm text-muted">
+              Run the workflow to see output and logs here.
+            </p>
+          )
         )}
       </div>
     </aside>

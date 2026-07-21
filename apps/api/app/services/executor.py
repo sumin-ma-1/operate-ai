@@ -1,13 +1,19 @@
-from collections import defaultdict, deque
+import json
+from collections.abc import AsyncIterator
+from typing import Any
 
 from app.schemas import (
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
     NodeExecutionResult,
-    WorkflowDefinition,
     WorkflowNode,
 )
-from app.services.input_content import build_input_text, collect_upstream_images
+from app.services.input_content import (
+    build_input_text,
+    build_llm_user_prompt,
+    collect_upstream_images,
+    get_upstream_source,
+)
 from app.services.ollama import OllamaService
 
 
@@ -21,6 +27,8 @@ class DAGExecutor:
     def _topological_sort(
         self, nodes: list[WorkflowNode], edges: list
     ) -> list[WorkflowNode]:
+        from collections import defaultdict, deque
+
         node_map = {node.id: node for node in nodes}
         in_degree: dict[str, int] = {node.id: 0 for node in nodes}
         adjacency: dict[str, list[str]] = defaultdict(list)
@@ -54,44 +62,81 @@ class DAGExecutor:
                 return node_outputs[edge.source]
         return ""
 
-    async def execute(self, request: ExecuteWorkflowRequest) -> ExecuteWorkflowResponse:
+    def _node_message(self, node: WorkflowNode) -> str:
+        if node.type == "input":
+            return "Reading input and attachments"
+        if node.type == "llm":
+            model = node.data.model or "gemma4:e4b"
+            return f"Calling Ollama ({model})"
+        if node.type == "output":
+            return "Collecting final output"
+        return "Running node"
+
+    async def execute_stream(
+        self, request: ExecuteWorkflowRequest
+    ) -> AsyncIterator[dict[str, Any]]:
         workflow = request.workflow
         node_results: list[NodeExecutionResult] = []
         node_outputs: dict[str, str] = {}
+        original_input_text = ""
         final_output = ""
 
         try:
             sorted_nodes = self._topological_sort(workflow.nodes, workflow.edges)
         except ValueError as exc:
-            return ExecuteWorkflowResponse(
-                success=False,
-                node_results=[],
-                final_output="",
-                error=str(exc),
-            )
+            yield {"type": "failed", "error": str(exc)}
+            return
+
+        yield {
+            "type": "started",
+            "nodes": [
+                {
+                    "nodeId": node.id,
+                    "nodeType": node.type,
+                    "label": node.data.label,
+                }
+                for node in sorted_nodes
+            ],
+        }
 
         for node in sorted_nodes:
+            yield {
+                "type": "node_started",
+                "nodeId": node.id,
+                "nodeType": node.type,
+                "label": node.data.label,
+                "message": self._node_message(node),
+            }
+
             output = ""
 
             if node.type == "input":
                 try:
                     output = build_input_text(node, request.input)
+                    original_input_text = output
                 except ValueError as exc:
-                    return ExecuteWorkflowResponse(
-                        success=False,
-                        node_results=node_results,
-                        final_output="",
-                        error=str(exc),
-                    )
+                    yield {
+                        "type": "node_failed",
+                        "nodeId": node.id,
+                        "error": str(exc),
+                    }
+                    yield {"type": "failed", "error": str(exc)}
+                    return
 
             elif node.type == "llm":
-                user_prompt = self._get_upstream_output(
+                active_edges = self._active_edges(workflow.edges)
+                upstream_output = self._get_upstream_output(
                     node.id, workflow.edges, node_outputs
                 )
-                if not user_prompt:
-                    user_prompt = "Please analyze the attached input."
+                upstream_source = get_upstream_source(
+                    node.id, workflow.nodes, active_edges
+                )
+                user_prompt = build_llm_user_prompt(
+                    original_input_text,
+                    upstream_output,
+                    upstream_source.type if upstream_source else None,
+                )
                 model = node.data.model or "gemma4:e4b"
-                active_edges = self._active_edges(workflow.edges)
                 images = collect_upstream_images(
                     node.id, workflow.nodes, workflow.edges, active_edges
                 )
@@ -104,12 +149,13 @@ class DAGExecutor:
                         images=images or None,
                     )
                 except Exception as exc:
-                    return ExecuteWorkflowResponse(
-                        success=False,
-                        node_results=node_results,
-                        final_output="",
-                        error=str(exc),
-                    )
+                    yield {
+                        "type": "node_failed",
+                        "nodeId": node.id,
+                        "error": str(exc),
+                    }
+                    yield {"type": "failed", "error": str(exc)}
+                    return
 
             elif node.type == "output":
                 output = self._get_upstream_output(
@@ -117,17 +163,65 @@ class DAGExecutor:
                 )
 
             node_outputs[node.id] = output
-            node_results.append(
-                NodeExecutionResult(
-                    nodeId=node.id,
-                    nodeType=node.type,
-                    output=output,
-                )
+            result = NodeExecutionResult(
+                nodeId=node.id,
+                nodeType=node.type,
+                output=output,
             )
+            node_results.append(result)
             final_output = output
 
+            yield {
+                "type": "node_completed",
+                "nodeId": node.id,
+                "nodeType": node.type,
+                "output": output,
+            }
+
+        yield {
+            "type": "completed",
+            "success": True,
+            "nodeResults": [
+                result.model_dump(by_alias=True) for result in node_results
+            ],
+            "finalOutput": final_output,
+        }
+
+    async def execute(self, request: ExecuteWorkflowRequest) -> ExecuteWorkflowResponse:
+        node_results: list[NodeExecutionResult] = []
+        final_output = ""
+
+        async for event in self.execute_stream(request):
+            if event["type"] == "node_completed":
+                node_results.append(
+                    NodeExecutionResult(
+                        nodeId=event["nodeId"],
+                        nodeType=event["nodeType"],
+                        output=event.get("output", ""),
+                    )
+                )
+                final_output = event.get("output", "")
+            elif event["type"] == "failed":
+                return ExecuteWorkflowResponse(
+                    success=False,
+                    node_results=node_results,
+                    final_output="",
+                    error=event.get("error"),
+                )
+            elif event["type"] == "completed":
+                return ExecuteWorkflowResponse(
+                    success=True,
+                    node_results=node_results,
+                    final_output=final_output,
+                )
+
         return ExecuteWorkflowResponse(
-            success=True,
+            success=False,
             node_results=node_results,
-            final_output=final_output,
+            final_output="",
+            error="Workflow execution ended unexpectedly",
         )
+
+    @staticmethod
+    def format_sse(event: dict[str, Any]) -> str:
+        return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"

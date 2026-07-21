@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from app.schemas import (
     ExecuteWorkflowRequest,
@@ -42,6 +43,27 @@ async def list_models() -> dict:
         return {"models": models}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Ollama unavailable: {exc}") from exc
+
+
+@app.post("/execute/stream")
+async def execute_workflow_stream(request: ExecuteWorkflowRequest) -> StreamingResponse:
+    async def event_generator():
+        try:
+            async for event in executor.execute_stream(request):
+                yield executor.format_sse(event)
+        except Exception as exc:
+            yield executor.format_sse(
+                {"type": "failed", "error": f"Workflow execution failed: {exc}"}
+            )
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.post(

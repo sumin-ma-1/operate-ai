@@ -17,6 +17,16 @@ import type {
   WorkflowNodeType,
 } from "@operate-ai/workflow-schema";
 
+export type ExecutionNodeStatus = "pending" | "running" | "completed" | "failed";
+
+export interface ExecutionProgressNode {
+  nodeId: string;
+  nodeType: WorkflowNodeType;
+  label: string;
+  status: ExecutionNodeStatus;
+  message?: string;
+}
+
 type WorkflowNode = Node<WorkflowNodeData, WorkflowNodeType>;
 
 export type WorkflowEdgeData = {
@@ -45,6 +55,7 @@ interface WorkflowState {
   selectedEdgeId: string | null;
   isRunning: boolean;
   lastResult: ExecuteWorkflowResponse | null;
+  executionProgress: ExecutionProgressNode[];
   setWorkflowMeta: (id: string, name: string) => void;
   setNodes: (nodes: WorkflowNode[]) => void;
   setEdges: (edges: WorkflowEdge[]) => void;
@@ -61,6 +72,12 @@ interface WorkflowState {
   loadWorkflow: (workflow: WorkflowDefinition) => void;
   toWorkflowDefinition: () => WorkflowDefinition;
   setRunning: (isRunning: boolean) => void;
+  setExecutionProgress: (items: ExecutionProgressNode[]) => void;
+  updateExecutionProgress: (
+    nodeId: string,
+    update: Partial<ExecutionProgressNode>
+  ) => void;
+  clearExecutionProgress: () => void;
   setLastResult: (result: ExecuteWorkflowResponse | null) => void;
   applyExecutionResults: (result: ExecuteWorkflowResponse) => void;
   reset: () => void;
@@ -109,6 +126,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectedEdgeId: null,
   isRunning: false,
   lastResult: null,
+  executionProgress: [],
 
   setWorkflowMeta: (id, name) => set({ workflowId: id, workflowName: name }),
 
@@ -197,6 +215,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedNodeId: null,
       selectedEdgeId: null,
       lastResult: null,
+      executionProgress: [],
     }),
 
   toWorkflowDefinition: () => {
@@ -223,6 +242,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   setRunning: (isRunning) => set({ isRunning }),
 
+  setExecutionProgress: (items) => set({ executionProgress: items }),
+
+  updateExecutionProgress: (nodeId, update) =>
+    set((state) => ({
+      executionProgress: state.executionProgress.map((item) =>
+        item.nodeId === nodeId ? { ...item, ...update } : item
+      ),
+    })),
+
+  clearExecutionProgress: () => set({ executionProgress: [] }),
+
   setLastResult: (result) => set({ lastResult: result }),
 
   applyExecutionResults: (result) =>
@@ -248,6 +278,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedEdgeId: null,
       isRunning: false,
       lastResult: null,
+      executionProgress: [],
     }),
 
   initDefaultWorkflow: (id, name) => {
@@ -282,6 +313,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedEdgeId: null,
       isRunning: false,
       lastResult: null,
+      executionProgress: [],
     });
   },
 }));

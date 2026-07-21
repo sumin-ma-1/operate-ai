@@ -3,6 +3,7 @@ import type {
   ExecuteWorkflowResponse,
   OllamaModel,
   WorkflowDefinition,
+  WorkflowNodeType,
   WorkflowSummary,
 } from "@operate-ai/workflow-schema";
 
@@ -79,6 +80,113 @@ export async function executeWorkflow(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export type ExecutionStreamEvent =
+  | {
+      type: "started";
+      nodes: Array<{
+        nodeId: string;
+        nodeType: WorkflowNodeType;
+        label: string;
+      }>;
+    }
+  | {
+      type: "node_started";
+      nodeId: string;
+      nodeType: WorkflowNodeType;
+      label: string;
+      message: string;
+    }
+  | {
+      type: "node_completed";
+      nodeId: string;
+      nodeType: WorkflowNodeType;
+      output: string;
+    }
+  | {
+      type: "node_failed";
+      nodeId: string;
+      error: string;
+    }
+  | ({
+      type: "completed";
+    } & ExecuteWorkflowResponse)
+  | {
+      type: "failed";
+      error: string;
+    };
+
+export async function executeWorkflowStream(
+  payload: ExecuteWorkflowRequest,
+  onEvent: (event: ExecutionStreamEvent) => void
+): Promise<ExecuteWorkflowResponse> {
+  const url = getApiUrl("/execute/stream");
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "Network error";
+    throw new Error(
+      `Failed to reach API at ${url}. Is the API running on port 8000? (${reason})`
+    );
+  }
+
+  if (!response.ok || !response.body) {
+    const error = await response.text();
+    throw new Error(error || `Request failed: ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalResult: ExecuteWorkflowResponse | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split("\n\n");
+    buffer = chunks.pop() || "";
+
+    for (const chunk of chunks) {
+      const line = chunk
+        .split("\n")
+        .find((entry) => entry.startsWith("data: "));
+      if (!line) continue;
+
+      const event = JSON.parse(line.slice(6)) as ExecutionStreamEvent;
+      onEvent(event);
+
+      if (event.type === "completed") {
+        finalResult = {
+          success: event.success,
+          nodeResults: event.nodeResults,
+          finalOutput: event.finalOutput,
+          error: event.error,
+        };
+      }
+
+      if (event.type === "failed") {
+        throw new Error(event.error);
+      }
+    }
+  }
+
+  if (!finalResult) {
+    throw new Error("Workflow execution ended unexpectedly");
+  }
+
+  return finalResult;
 }
 
 export async function fetchModels(): Promise<OllamaModel[]> {

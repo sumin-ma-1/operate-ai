@@ -58,7 +58,18 @@ export function EditorHeader() {
       </div>
       <div className="flex items-center gap-3">
         {message && <span className="text-xs text-muted">{message}</span>}
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="inline-flex items-center gap-1.5 !rounded-full px-4 py-1.0"
+        >
+          <span
+            className={`material-icons text-[18px] leading-none ${
+              isSaving ? "animate-spin" : ""
+            }`}
+          >
+            {isSaving ? "autorenew" : "save"}
+          </span>
           {isSaving ? "Saving..." : "Save"}
         </Button>
       </div>

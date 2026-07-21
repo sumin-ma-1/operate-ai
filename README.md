@@ -4,7 +4,15 @@
 </h1>
 
 <p align="center">
-  Visual editor for AI agents and LLM workflows — build on a canvas, run against local Ollama.
+  A visual editor for easily building AI agents and LLM workflows
+</p>
+
+<p align="center">
+  <img
+    src="https://github.com/user-attachments/assets/16466ad2-b79b-4566-9fab-e18a73d23a6d"
+    alt="Operate AI preview"
+    width="900"
+  />
 </p>
 
 ## Overview

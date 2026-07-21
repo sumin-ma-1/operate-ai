@@ -62,7 +62,7 @@ export default function HomePage() {
         <RotatingTagline />
         <div className="mt-6">
           <Link href="/editor/new">
-            <Button className="!rounded-full px-6 py-2.5 shadow-[0_0_20px_rgba(59,130,246,0.35)] transition duration-300 hover:shadow-[0_0_28px_rgba(59,130,246,0.55)] hover:!opacity-100">
+            <Button className="!rounded-full border-0 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-6 py-2.5 shadow-[0_0_28px_rgba(59,130,246,0.55),0_0_48px_rgba(99,102,241,0.25)] transition duration-300 hover:shadow-[0_0_36px_rgba(59,130,246,0.75),0_0_64px_rgba(99,102,241,0.4)] hover:!opacity-100">
               New Workflow
             </Button>
           </Link>

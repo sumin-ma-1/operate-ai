@@ -4,146 +4,133 @@
 </h1>
 
 <p align="center">
-  Visual editor for AI agents and LLM workflows. Build node-based workflows and execute them against local Ollama models.
+  Visual editor for AI agents and LLM workflows — build on a canvas, run against local Ollama.
 </p>
 
-## Stack
+## Overview
 
-- **Frontend**: Next.js, React Flow (`@xyflow/react`), Zustand, Tailwind CSS
-- **Backend**: FastAPI, httpx
-- **LLM**: Ollama (`http://localhost:11434`)
-- **Monorepo**: pnpm workspaces
+```mermaid
+flowchart LR
+  subgraph Web["apps/web · Next.js"]
+    Canvas[React Flow canvas]
+    Fab[Add / Execution FABs]
+    Inspector[Floating inspectors]
+  end
 
-## Project Structure
+  subgraph API["apps/api · FastAPI"]
+    Executor[DAG executor]
+    Store[(Workflow store)]
+  end
 
+  subgraph LLM["Ollama"]
+    Models[Local models]
+  end
+
+  Canvas --> Fab
+  Canvas --> Inspector
+  Web -->|SSE / REST| API
+  Executor --> Models
+  API --> Store
 ```
-operate-ai/
-├── apps/
-│   ├── web/          # Next.js visual editor
-│   └── api/          # FastAPI execution engine
-├── packages/
-│   └── workflow-schema/
-├── docker-compose.yml
-└── pnpm-workspace.yaml
+
+## Workflow model
+
+```mermaid
+flowchart LR
+  IN[Input\n text & files] --> LLM[LLM\n Ollama chat]
+  LLM --> OUT[Output\n final result]
 ```
 
-## Prerequisites
+| Node | Role |
+|------|------|
+| **Input** | Text and attachments (`.docx`, `.pdf`, images, …) |
+| **LLM** | Ollama call — receives original input + upstream output |
+| **Output** | Displays the final result |
 
-- Node.js 18+
-- pnpm
-- Python 3.11+
-- Ollama (local install or Docker)
+Execution order follows the graph (disabled edges are skipped).
 
-## Setup
+## Editor
 
-### 1. Clone and install dependencies
+```mermaid
+flowchart TB
+  subgraph Canvas["Full-width canvas"]
+    N[Nodes & edges]
+    MM[MiniMap · bottom-left]
+    ZM[Zoom controls · bottom-center]
+  end
+
+  Add["+ FAB"] -->|add nodes| N
+  Wand["Execution FAB"] -->|floating panel| Run[Run · progress · output]
+  N -->|select| Insp[Node / edge inspector]
+```
+
+- **+** — add Input, LLM, or Output nodes  
+- **Execution** — run workflow, live progress chain, final output, collapsible node logs  
+- **Inspectors** — properties appear next to the selected node or edge  
+
+## Quick start
+
+**Prerequisites:** Node 18+, pnpm, Python 3.11+, [Ollama](https://ollama.com)
 
 ```bash
 pnpm install
 pnpm build:schema
-```
 
-### 2. Environment variables
-
-```bash
 cp .env.example .env
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API URL |
-| `NEXT_PUBLIC_API_URL` | `/backend` | Web app API base (Next.js proxies to FastAPI on `:8000`) |
-
-### 3. Start Ollama
-
-**Option A: Docker**
-
 ```bash
+# Ollama (Docker)
 docker compose up -d ollama
 docker exec -it operate-ai-ollama ollama pull gemma4:e4b
-```
 
-**Option B: Local Ollama**
-
-```bash
-ollama serve
-ollama pull gemma4:e4b
-```
-
-### 4. Start the API
-
-```bash
-cd apps/api
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Or from the repo root:
-
-```bash
+# API + web (separate terminals)
 pnpm dev:api
-```
-
-### 5. Start the web app
-
-```bash
 pnpm dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) → **New Workflow** → edit nodes → **Run**.
 
-## Usage
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API |
+| `NEXT_PUBLIC_API_URL` | `/backend` | Web → FastAPI proxy (`:8000`) |
 
-1. Click **New Workflow** on the home page.
-2. The editor opens with Input → LLM → Output nodes pre-connected.
-3. Select nodes to edit properties in the right panel.
-4. Enter input text on the Input node.
-5. Configure the LLM node (model, system prompt, user prompt template).
-6. Click **Run** to execute via Ollama.
-7. Click **Save** to persist the workflow.
+## Stack
 
-## API Endpoints
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js, React Flow, Zustand, Tailwind |
+| Backend | FastAPI, httpx |
+| LLM | Ollama |
+| Shared types | `packages/workflow-schema` |
+
+## Repo layout
+
+```
+operate-ai/
+├── apps/web/                 # Visual editor
+├── apps/api/                 # Execution & persistence
+├── packages/workflow-schema/ # Shared workflow types
+└── docker-compose.yml        # Ollama
+```
+
+## Scripts
+
+```bash
+pnpm dev:web        # :3000
+pnpm dev:api        # :8000
+pnpm build:schema   # Shared TS types
+pnpm build:web      # Production build
+```
+
+## API (summary)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/models` | List Ollama models |
-| POST | `/execute` | Execute a workflow |
-| GET | `/workflows` | List saved workflows |
-| GET | `/workflows/{id}` | Get a workflow |
-| POST | `/workflows` | Save a workflow |
-| DELETE | `/workflows/{id}` | Delete a workflow |
-
-## MVP Node Types
-
-| Node | Description |
-|------|-------------|
-| **Input** | Workflow entry text |
-| **LLM** | Ollama chat completion (previous node output is used as the user prompt) |
-| **Output** | Displays final result |
-
-## Development Scripts
-
-```bash
-pnpm dev:web       # Start Next.js on :3000
-pnpm dev:api       # Start FastAPI on :8000
-pnpm build:schema  # Build shared TypeScript types
-pnpm build:web     # Build Next.js app
-```
-
-## Next Steps
-
-- Condition / Loop / Tool / Agent nodes
-- Streaming responses (SSE)
-- Authentication and multi-user support
-- PostgreSQL persistence
-- Workflow versioning and execution history
+| `POST` | `/execute/stream` | Run workflow (SSE progress) |
+| `POST` | `/execute` | Run workflow (JSON) |
+| `GET` | `/models` | List Ollama models |
+| `GET/POST` | `/workflows` | List / save workflows |
+| `GET/DELETE` | `/workflows/{id}` | Get / delete workflow |

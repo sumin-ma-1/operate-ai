@@ -18,6 +18,11 @@ class WorkflowAttachment(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class WorkflowNodeStyle(BaseModel):
+    width: Optional[float] = None
+    height: Optional[float] = None
+
+
 class WorkflowNodeData(BaseModel):
     label: str
     value: Optional[str] = None
@@ -28,15 +33,23 @@ class WorkflowNodeData(BaseModel):
         default="{{input}}", alias="userPromptTemplate"
     )
     result: Optional[str] = None
+    goal_prompt: Optional[str] = Field(default=None, alias="goalPrompt")
+    max_iterations: Optional[int] = Field(default=5, alias="maxIterations")
+    checker_model: Optional[str] = Field(default=None, alias="checkerModel")
 
     model_config = {"populate_by_name": True}
 
 
 class WorkflowNode(BaseModel):
     id: str
-    type: Literal["input", "llm", "output"]
+    type: Literal["input", "llm", "output", "loop"]
     position: WorkflowNodePosition
     data: WorkflowNodeData
+    parent_id: Optional[str] = Field(default=None, alias="parentId")
+    style: Optional[WorkflowNodeStyle] = None
+    extent: Optional[Literal["parent"]] = None
+
+    model_config = {"populate_by_name": True}
 
 
 class WorkflowEdge(BaseModel):

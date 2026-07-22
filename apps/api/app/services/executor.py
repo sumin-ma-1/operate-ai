@@ -14,15 +14,20 @@ from app.services.input_content import (
     collect_upstream_images,
     get_upstream_source,
 )
+from app.services.loop_executor import LoopExecutor
 from app.services.ollama import OllamaService
 
 
 class DAGExecutor:
     def __init__(self, ollama_service: OllamaService | None = None) -> None:
         self.ollama = ollama_service or OllamaService()
+        self.loop_executor = LoopExecutor(self.ollama)
 
     def _active_edges(self, edges: list) -> list:
         return [edge for edge in edges if not getattr(edge, "disabled", False)]
+
+    def _outer_nodes(self, nodes: list[WorkflowNode]) -> list[WorkflowNode]:
+        return [node for node in nodes if not node.parent_id]
 
     def _topological_sort(
         self, nodes: list[WorkflowNode], edges: list
@@ -70,6 +75,8 @@ class DAGExecutor:
             return f"Calling Ollama ({model})"
         if node.type == "output":
             return "Collecting final output"
+        if node.type == "loop":
+            return "Running agent loop until goal"
         return "Running node"
 
     async def execute_stream(
@@ -81,8 +88,10 @@ class DAGExecutor:
         original_input_text = ""
         final_output = ""
 
+        outer_nodes = self._outer_nodes(workflow.nodes)
+
         try:
-            sorted_nodes = self._topological_sort(workflow.nodes, workflow.edges)
+            sorted_nodes = self._topological_sort(outer_nodes, workflow.edges)
         except ValueError as exc:
             yield {"type": "failed", "error": str(exc)}
             return
@@ -148,6 +157,33 @@ class DAGExecutor:
                         system_message=node.data.system_prompt,
                         images=images or None,
                     )
+                except Exception as exc:
+                    yield {
+                        "type": "node_failed",
+                        "nodeId": node.id,
+                        "error": str(exc),
+                    }
+                    yield {"type": "failed", "error": str(exc)}
+                    return
+
+            elif node.type == "loop":
+                loop_input = self._get_upstream_output(
+                    node.id, workflow.edges, node_outputs
+                )
+                try:
+                    async for event in self.loop_executor.execute_stream(
+                        loop_node=node,
+                        all_nodes=workflow.nodes,
+                        all_edges=workflow.edges,
+                        loop_input=loop_input,
+                        original_input_text=original_input_text,
+                    ):
+                        yield event
+                        if event["type"] == "loop_completed":
+                            output = event.get("output", "")
+                        elif event["type"] == "node_failed":
+                            yield {"type": "failed", "error": event.get("error", "")}
+                            return
                 except Exception as exc:
                     yield {
                         "type": "node_failed",

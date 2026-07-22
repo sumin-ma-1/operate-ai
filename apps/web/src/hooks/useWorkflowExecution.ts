@@ -2,10 +2,11 @@
 
 import { useCallback } from "react";
 
+import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
+
 import { getExecutionMessage, getExecutionOrder } from "@/lib/execution-order";
 import { executeWorkflowStream } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
-
 function isAbortError(err: unknown) {
   return err instanceof Error && err.name === "AbortError";
 }
@@ -69,8 +70,9 @@ export function useWorkflowExecution() {
       const orderedNodes = getExecutionOrder(
         nodes.map((node) => ({
           id: node.id,
-          type: node.type as "input" | "llm" | "output",
+          type: node.type as WorkflowNodeType,
           label: node.data.label,
+          parentId: node.parentId,
         })),
         edges.map((edge) => ({
           source: edge.source,
@@ -121,12 +123,21 @@ export function useWorkflowExecution() {
             }
 
             if (event.type === "node_started") {
+              if (event.loopId) {
+                updateExecutionProgress(event.loopId, {
+                  status: "running",
+                  message: event.message,
+                  iteration: event.iteration,
+                });
+                return;
+              }
+
               const current = useWorkflowStore.getState().executionProgress;
               setExecutionProgress(
                 current.map((item) =>
                   item.nodeId === event.nodeId
                     ? { ...item, status: "running", message: event.message }
-                    : item.status === "running"
+                    : item.status === "running" && item.nodeType !== "loop"
                       ? { ...item, status: "pending", message: undefined }
                       : item
                 )
@@ -135,9 +146,52 @@ export function useWorkflowExecution() {
             }
 
             if (event.type === "node_completed") {
+              if (event.loopId) {
+                updateExecutionProgress(event.loopId, {
+                  status: "running",
+                  message: event.iteration
+                    ? `Iteration ${event.iteration} completed inner step`
+                    : undefined,
+                  iteration: event.iteration,
+                });
+                return;
+              }
+
               updateExecutionProgress(event.nodeId, {
                 status: "completed",
                 message: undefined,
+                iteration: undefined,
+                maxIterations: undefined,
+              });
+              return;
+            }
+
+            if (event.type === "loop_started") {
+              updateExecutionProgress(event.nodeId, {
+                status: "running",
+                message: event.message,
+                maxIterations: event.maxIterations,
+                iteration: 1,
+              });
+              return;
+            }
+
+            if (event.type === "loop_iteration") {
+              updateExecutionProgress(event.nodeId, {
+                status: "running",
+                message: event.message,
+                iteration: event.iteration,
+                maxIterations: event.maxIterations,
+              });
+              return;
+            }
+
+            if (event.type === "loop_completed") {
+              updateExecutionProgress(event.nodeId, {
+                status: "completed",
+                message: `${event.reason} (${event.iterations}/${event.maxIterations})`,
+                iteration: event.iterations,
+                maxIterations: event.maxIterations,
               });
               return;
             }

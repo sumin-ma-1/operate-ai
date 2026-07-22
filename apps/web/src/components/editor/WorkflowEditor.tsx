@@ -12,9 +12,11 @@ import "@xyflow/react/dist/style.css";
 
 import { AddNodeFab } from "@/components/editor/AddNodeFab";
 import { ExecutionFab } from "@/components/editor/ExecutionFab";
+import { LoopDrawOverlay } from "@/components/editor/LoopDrawOverlay";
 import { MiniMapEdges } from "@/components/editor/MiniMapEdges";
 import { NodeInspector } from "@/components/editor/NodeInspector";
 import { nodeTypes } from "@/components/editor/nodes";
+import { canBeTarget, isInnerNode } from "@/stores/workflowStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 function WorkflowCanvas() {
@@ -23,6 +25,7 @@ function WorkflowCanvas() {
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
   const selectedEdgeId = useWorkflowStore((state) => state.selectedEdgeId);
   const connectSourceId = useWorkflowStore((state) => state.connectSourceId);
+  const loopDrawMode = useWorkflowStore((state) => state.loopDrawMode);
   const onNodesChange = useWorkflowStore((state) => state.onNodesChange);
   const onEdgesChange = useWorkflowStore((state) => state.onEdgesChange);
   const onConnect = useWorkflowStore((state) => state.onConnect);
@@ -48,18 +51,32 @@ function WorkflowCanvas() {
 
   const nodesWithSelection = nodes.map((node) => {
     const isConnectSource = node.id === connectSourceId;
+    const nodeType = node.type as "input" | "llm" | "output" | "loop";
+    const connectSource = connectSourceId
+      ? nodes.find((item) => item.id === connectSourceId)
+      : null;
     const isValidTarget =
       Boolean(connectSourceId) &&
       node.id !== connectSourceId &&
-      (node.type === "llm" || node.type === "output");
+      !isInnerNode(node) &&
+      canBeTarget(nodeType);
+
+    const isValidInnerTarget =
+      Boolean(connectSourceId) &&
+      node.id !== connectSourceId &&
+      Boolean(connectSource?.parentId) &&
+      node.parentId === connectSource?.parentId &&
+      canBeTarget(nodeType);
 
     return {
       ...node,
       selected: node.id === selectedNodeId,
+      draggable: !loopDrawMode,
+      selectable: !loopDrawMode,
       className: [
         node.className,
         isConnectSource ? "is-connect-source" : "",
-        isValidTarget ? "is-connect-target" : "",
+        isValidTarget || isValidInnerTarget ? "is-connect-target" : "",
       ]
         .filter(Boolean)
         .join(" "),
@@ -74,15 +91,24 @@ function WorkflowCanvas() {
   return (
     <>
       <ReactFlow
-        className={`h-full w-full ${connectSourceId ? "is-connecting" : ""}`}
+        className={`h-full w-full ${connectSourceId ? "is-connecting" : ""} ${
+          loopDrawMode ? "is-loop-drawing" : ""
+        }`}
         nodes={nodesWithSelection}
         edges={edgesWithSelection}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(_, node) => handleConnectNodeClick(node.id)}
-        onEdgeClick={(_, edge) => selectEdge(edge.id)}
+        onNodeClick={(_, node) => {
+          if (loopDrawMode) return;
+          handleConnectNodeClick(node.id);
+        }}
+        onEdgeClick={(_, edge) => {
+          if (loopDrawMode) return;
+          selectEdge(edge.id);
+        }}
         onPaneClick={() => {
+          if (loopDrawMode) return;
           cancelConnect();
           selectNode(null);
           selectEdge(null);
@@ -92,11 +118,15 @@ function WorkflowCanvas() {
           selectNode(null);
         }}
         onEdgesDelete={() => selectEdge(null)}
-        deleteKeyCode={["Backspace", "Delete"]}
+        deleteKeyCode={loopDrawMode ? null : ["Backspace", "Delete"]}
         connectionRadius={40}
         nodeTypes={nodeTypes}
         colorMode="dark"
         fitView
+        panOnDrag={loopDrawMode ? false : [1, 2]}
+        zoomOnScroll={!loopDrawMode}
+        zoomOnPinch={!loopDrawMode}
+        zoomOnDoubleClick={!loopDrawMode}
         defaultEdgeOptions={{
           style: { stroke: "#60a5fa" },
         }}
@@ -124,13 +154,15 @@ function WorkflowCanvas() {
                 return "#a78bfa";
               case "output":
                 return "#34d399";
+              case "loop":
+                return "#fbbf24";
               default:
                 return "#94a3b8";
             }
           }}
         />
         <MiniMapEdges />
-        <NodeInspector />
+        {!loopDrawMode && <NodeInspector />}
       </ReactFlow>
 
       {connectSourceId && (
@@ -140,6 +172,8 @@ function WorkflowCanvas() {
           </div>
         </div>
       )}
+
+      {loopDrawMode && <LoopDrawOverlay />}
     </>
   );
 }

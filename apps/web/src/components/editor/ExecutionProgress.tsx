@@ -13,6 +13,8 @@ export interface ExecutionProgressNode {
   label: string;
   status: ExecutionNodeStatus;
   message?: string;
+  iteration?: number;
+  maxIterations?: number;
 }
 
 interface ExecutionProgressProps {
@@ -27,6 +29,8 @@ function typeClass(nodeType: WorkflowNodeType) {
       return "text-violet-400";
     case "output":
       return "text-emerald-400";
+    case "loop":
+      return "text-amber-300";
   }
 }
 
@@ -142,6 +146,14 @@ export function ExecutionProgress({ items }: ExecutionProgressProps) {
               {item.status === "running" && item.message && (
                 <p className="mt-1 text-xs text-muted">{item.message}</p>
               )}
+              {item.nodeType === "loop" &&
+                item.iteration &&
+                item.maxIterations &&
+                item.status !== "pending" && (
+                  <p className="mt-1 text-[11px] uppercase tracking-wide text-amber-300/80">
+                    Iteration {item.iteration}/{item.maxIterations}
+                  </p>
+                )}
             </div>
           </div>
 

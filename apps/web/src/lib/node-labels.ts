@@ -4,6 +4,7 @@ export const NODE_TYPE_LABELS: Record<WorkflowNodeType, string> = {
   input: "Start Point",
   llm: "LLM",
   output: "End Point",
+  loop: "Agent Loop",
 };
 
 export const NODE_LABEL_PLACEHOLDER = "MAKE A LABEL";

@@ -46,6 +46,11 @@ function accentForType(type: string | undefined) {
         panel: "border-emerald-400/35 shadow-[0_0_32px_rgba(52,211,153,0.2)]",
         port: "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.85)]",
       };
+    case "loop":
+      return {
+        panel: "border-amber-400/35 shadow-[0_0_32px_rgba(251,191,36,0.2)]",
+        port: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.85)]",
+      };
     default:
       return {
         panel: "border-white/10 shadow-[0_0_24px_rgba(148,163,184,0.12)]",
@@ -234,6 +239,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
   const nodes = useWorkflowStore((state) => state.nodes);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const removeNode = useWorkflowStore((state) => state.removeNode);
+  const unwrapLoop = useWorkflowStore((state) => state.unwrapLoop);
   const [models, setModels] = useState<string[]>(["gemma4:e4b"]);
   const internalNode = useInternalNode(nodeId);
   const { flowToScreenPosition } = useReactFlow();
@@ -332,17 +338,36 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
               {type ? getNodeTypeLabel(type as WorkflowNodeType) : "Node"}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            className="inline-flex shrink-0 items-center justify-center !rounded-full !px-2 !py-1 !font-normal text-red-300/40 hover:!bg-red-500/10 hover:text-red-300/85"
-            onClick={() => removeNode(id)}
-            title="Delete node"
-            aria-label="Delete node"
-          >
-            <span className="material-icons text-[16px] leading-none">
-              delete
-            </span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            {type === "loop" && (
+              <Button
+                variant="ghost"
+                className="inline-flex items-center justify-center !rounded-full !px-2 !py-1 !font-normal text-white/45 hover:!bg-white/10 hover:text-white/80"
+                onClick={() => unwrapLoop(id)}
+                title="Remove loop box and keep inner LLMs"
+                aria-label="Remove loop box"
+              >
+                <span className="material-icons text-[16px] leading-none">
+                  crop_free
+                </span>
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              className="inline-flex shrink-0 items-center justify-center !rounded-full !px-2 !py-1 !font-normal text-red-300/40 hover:!bg-red-500/10 hover:text-red-300/85"
+              onClick={() => removeNode(id)}
+              title={
+                type === "loop"
+                  ? "Delete loop and all inner LLMs"
+                  : "Delete node"
+              }
+              aria-label="Delete node"
+            >
+              <span className="material-icons text-[16px] leading-none">
+                delete
+              </span>
+            </Button>
+          </div>
         </div>
 
         <div className="mt-4 max-h-[min(60vh,420px)] space-y-4 overflow-y-auto pr-0.5 scrollbar-none">
@@ -412,6 +437,43 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                   onChange={(event) =>
                     updateNodeData(id, { systemPrompt: event.target.value })
                   }
+                />
+              </div>
+            </>
+          )}
+
+          {type === "loop" && (
+            <>
+              <div>
+                <label className="mb-1.5 block text-xs text-white/70">Goal</label>
+                <Textarea
+                  rows={3}
+                  className={`${fieldClass} scrollbar-none`}
+                  placeholder="When should this loop stop?"
+                  value={data.goalPrompt || ""}
+                  onChange={(event) =>
+                    updateNodeData(id, { goalPrompt: event.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-white/70">
+                  Max iterations
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  className={fieldClass}
+                  value={data.maxIterations ?? 5}
+                  onChange={(event) => {
+                    const parsed = Number(event.target.value);
+                    updateNodeData(id, {
+                      maxIterations: Number.isNaN(parsed)
+                        ? 5
+                        : Math.min(20, Math.max(1, parsed)),
+                    });
+                  }}
                 />
               </div>
             </>

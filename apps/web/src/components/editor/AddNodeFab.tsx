@@ -8,20 +8,33 @@ import { NODE_TYPE_LABELS } from "@/lib/node-labels";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 const paletteItems: {
-  type: WorkflowNodeType;
+  kind: "node" | "loop-draw";
+  type?: WorkflowNodeType;
   label: string;
   description: string;
 }[] = [
   {
+    kind: "node",
     type: "input",
     label: NODE_TYPE_LABELS.input,
     description: "Prompt",
   },
-  { type: "llm", label: NODE_TYPE_LABELS.llm, description: "Model call" },
   {
+    kind: "node",
+    type: "llm",
+    label: NODE_TYPE_LABELS.llm,
+    description: "Model call",
+  },
+  {
+    kind: "node",
     type: "output",
     label: NODE_TYPE_LABELS.output,
     description: "Final result",
+  },
+  {
+    kind: "loop-draw",
+    label: NODE_TYPE_LABELS.loop,
+    description: "Draw on canvas",
   },
 ];
 
@@ -44,10 +57,17 @@ const chipStyles: Record<
       "border-emerald-400 bg-emerald-500/55 hover:border-emerald-300 hover:bg-emerald-500/70",
     badge: "border-emerald-300 bg-emerald-600 text-emerald-50",
   },
+  loop: {
+    container:
+      "border-amber-400 bg-amber-500/55 hover:border-amber-300 hover:bg-amber-500/70",
+    badge: "border-amber-300 bg-amber-600 text-amber-50",
+  },
 };
 
 export function AddNodeFab() {
   const addNode = useWorkflowStore((state) => state.addNode);
+  const startLoopDrawMode = useWorkflowStore((state) => state.startLoopDrawMode);
+  const loopDrawMode = useWorkflowStore((state) => state.loopDrawMode);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +101,7 @@ export function AddNodeFab() {
           type="button"
           onClick={() => setOpen((current) => !current)}
           className={`inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-400/50 bg-sky-500/90 text-white shadow-[0_8px_24px_rgba(14,165,233,0.35)] transition duration-300 hover:bg-sky-400 hover:shadow-[0_10px_28px_rgba(14,165,233,0.45)] ${
-            open ? "rotate-45" : "animate-float"
+            open || loopDrawMode ? "rotate-45" : "animate-float"
           }`}
           title={open ? "Close nodes" : "Add node"}
           aria-label={open ? "Close nodes" : "Add node"}
@@ -97,15 +117,22 @@ export function AddNodeFab() {
             </p>
             <div className="flex flex-col gap-2">
               {paletteItems.map((item) => {
-                const styles = chipStyles[item.type];
+                const styles =
+                  item.kind === "loop-draw"
+                    ? chipStyles.loop
+                    : chipStyles[item.type!];
 
                 return (
                   <button
-                    key={item.type}
+                    key={item.label}
                     type="button"
                     className={`w-full rounded-md border px-3 py-2 text-left transition ${styles.container}`}
                     onClick={() => {
-                      addNode(item.type);
+                      if (item.kind === "loop-draw") {
+                        startLoopDrawMode();
+                      } else if (item.type) {
+                        addNode(item.type);
+                      }
                       setOpen(false);
                     }}
                   >

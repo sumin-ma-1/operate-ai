@@ -94,7 +94,9 @@ function PanelBody({
                       ? "border-sky-400/30"
                       : result.nodeType === "llm"
                         ? "border-violet-400/30"
-                        : "border-emerald-400/30";
+                        : result.nodeType === "loop"
+                          ? "border-amber-400/30"
+                          : "border-emerald-400/30";
 
                   return (
                     <div

@@ -4,6 +4,7 @@ type ExecutionNode = {
   id: string;
   type: WorkflowNodeType;
   label: string;
+  parentId?: string;
 };
 
 type ExecutionEdge = {
@@ -16,12 +17,13 @@ export function getExecutionOrder(
   nodes: ExecutionNode[],
   edges: ExecutionEdge[]
 ): ExecutionNode[] {
+  const outerNodes = nodes.filter((node) => !node.parentId);
   const activeEdges = edges.filter((edge) => !edge.disabled);
-  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const inDegree = new Map(nodes.map((node) => [node.id, 0]));
+  const nodeMap = new Map(outerNodes.map((node) => [node.id, node]));
+  const inDegree = new Map(outerNodes.map((node) => [node.id, 0]));
   const adjacency = new Map<string, string[]>();
 
-  for (const node of nodes) {
+  for (const node of outerNodes) {
     adjacency.set(node.id, []);
   }
 
@@ -31,7 +33,7 @@ export function getExecutionOrder(
     inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
   }
 
-  const queue = nodes
+  const queue = outerNodes
     .map((node) => node.id)
     .filter((nodeId) => (inDegree.get(nodeId) || 0) === 0);
   const sorted: ExecutionNode[] = [];
@@ -54,7 +56,7 @@ export function getExecutionOrder(
     }
   }
 
-  return sorted.length === nodes.length ? sorted : nodes;
+  return sorted.length === outerNodes.length ? sorted : outerNodes;
 }
 
 export function getExecutionMessage(
@@ -69,6 +71,9 @@ export function getExecutionMessage(
   }
   if (nodeType === "output") {
     return "Collecting final output";
+  }
+  if (nodeType === "loop") {
+    return "Running agent loop until goal";
   }
   return "Running node";
 }

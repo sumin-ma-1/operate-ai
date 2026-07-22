@@ -1,4 +1,4 @@
-export type WorkflowNodeType = "input" | "llm" | "output";
+export type WorkflowNodeType = "input" | "llm" | "output" | "loop";
 
 export type WorkflowAttachmentKind = "text" | "image" | "document";
 
@@ -15,6 +15,11 @@ export interface WorkflowNodePosition {
   y: number;
 }
 
+export interface WorkflowNodeStyle {
+  width?: number;
+  height?: number;
+}
+
 export interface WorkflowNodeData extends Record<string, unknown> {
   label: string;
   value?: string;
@@ -23,6 +28,12 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   systemPrompt?: string;
   userPromptTemplate?: string;
   result?: string;
+  /** Loop container: natural-language stop condition */
+  goalPrompt?: string;
+  /** Loop container: safety cap (default 5) */
+  maxIterations?: number;
+  /** Loop container: optional model for built-in checker */
+  checkerModel?: string;
 }
 
 export interface WorkflowNode {
@@ -30,6 +41,9 @@ export interface WorkflowNode {
   type: WorkflowNodeType;
   position: WorkflowNodePosition;
   data: WorkflowNodeData;
+  parentId?: string;
+  style?: WorkflowNodeStyle;
+  extent?: "parent";
 }
 
 export interface WorkflowEdge {

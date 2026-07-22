@@ -147,6 +147,18 @@ body {
   max-width: 220px !important;
 }
 
+.react-flow__node-loop {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.react-flow__node.loop-inner-node {
+  width: 160px !important;
+  max-width: 160px !important;
+}
+
 .react-flow__node-input {
   border-color: rgb(56 189 248) !important; /* sky-400 */
 }

@@ -97,17 +97,43 @@ export type ExecutionStreamEvent =
       nodeType: WorkflowNodeType;
       label: string;
       message: string;
+      loopId?: string;
+      iteration?: number;
     }
   | {
       type: "node_completed";
       nodeId: string;
       nodeType: WorkflowNodeType;
       output: string;
+      loopId?: string;
+      iteration?: number;
     }
   | {
       type: "node_failed";
       nodeId: string;
       error: string;
+    }
+  | {
+      type: "loop_started";
+      nodeId: string;
+      label: string;
+      maxIterations: number;
+      message: string;
+    }
+  | {
+      type: "loop_iteration";
+      nodeId: string;
+      iteration: number;
+      maxIterations: number;
+      message: string;
+    }
+  | {
+      type: "loop_completed";
+      nodeId: string;
+      iterations: number;
+      maxIterations: number;
+      reason: string;
+      output: string;
     }
   | ({
       type: "completed";

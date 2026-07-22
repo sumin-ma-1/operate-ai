@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { NODE_TYPE_LABELS } from "@/lib/node-labels";
 import { fetchModels } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
@@ -18,6 +19,7 @@ export function PropertyPanel() {
   const edges = useWorkflowStore((state) => state.edges);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const removeNode = useWorkflowStore((state) => state.removeNode);
+  const unwrapLoop = useWorkflowStore((state) => state.unwrapLoop);
   const removeEdge = useWorkflowStore((state) => state.removeEdge);
   const setEdgeDisabled = useWorkflowStore((state) => state.setEdgeDisabled);
   const [models, setModels] = useState<string[]>(["gemma4:e4b"]);
@@ -112,15 +114,28 @@ export function PropertyPanel() {
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold">Properties</h2>
-          <p className="mt-1 text-xs uppercase text-muted">{type}</p>
+          <p className="mt-1 text-xs uppercase text-muted">
+            {type === "loop" ? NODE_TYPE_LABELS.loop : type}
+          </p>
         </div>
-        <Button
-          variant="ghost"
-          className="shrink-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
-          onClick={() => removeNode(id)}
-        >
-          Delete
-        </Button>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {type === "loop" && (
+            <Button
+              variant="ghost"
+              className="text-white/70 hover:bg-white/10 hover:text-white"
+              onClick={() => unwrapLoop(id)}
+            >
+              Remove loop box
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            className="shrink-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+            onClick={() => removeNode(id)}
+          >
+            {type === "loop" ? "Delete all" : "Delete"}
+          </Button>
+        </div>
       </div>
 
       <div className="mt-4 space-y-4">
@@ -175,6 +190,57 @@ export function PropertyPanel() {
                   updateNodeData(id, { systemPrompt: event.target.value })
                 }
               />
+            </div>
+          </>
+        )}
+
+        {type === "loop" && (
+          <>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Goal</label>
+              <Textarea
+                rows={4}
+                value={data.goalPrompt || ""}
+                placeholder="When should this loop stop?"
+                onChange={(event) =>
+                  updateNodeData(id, { goalPrompt: event.target.value })
+                }
+              />
+              <p className="mt-1 text-xs text-muted">
+                Describe the condition that means the agent is done.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Max iterations</label>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={data.maxIterations ?? 5}
+                onChange={(event) => {
+                  const parsed = Number(event.target.value);
+                  updateNodeData(id, {
+                    maxIterations: Number.isNaN(parsed)
+                      ? 5
+                      : Math.min(20, Math.max(1, parsed)),
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Checker model</label>
+              <Select
+                value={data.checkerModel || data.model || "gemma4:e4b"}
+                onChange={(event) =>
+                  updateNodeData(id, { checkerModel: event.target.value })
+                }
+              >
+                {models.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </Select>
             </div>
           </>
         )}

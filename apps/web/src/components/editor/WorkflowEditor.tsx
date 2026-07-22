@@ -102,12 +102,16 @@ function WorkflowCanvas() {
         }}
       >
         <Background gap={16} size={1} color="#334155" />
-        <Controls position="bottom-center" orientation="horizontal" />
+        <Controls
+          position="bottom-center"
+          orientation="horizontal"
+          showInteractive={false}
+        />
         <MiniMap
           pannable
           zoomable
-          position="bottom-left"
-          style={{ left: 12, bottom: 12 }}
+          position="top-right"
+          style={{ right: 12, top: 12 }}
           maskColor="rgb(15 23 42 / 0.75)"
           bgColor="hsl(217 33% 17%)"
           nodeStrokeWidth={2}

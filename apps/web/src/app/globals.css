@@ -187,15 +187,16 @@ body {
   transform: scale(1.35);
 }
 
-/* Zoom controls: horizontal bar centered at bottom */
+/* Zoom controls: horizontal bar centered at bottom, lifted when panel open */
 .react-flow__controls {
   display: flex !important;
   flex-direction: row !important;
-  bottom: 12px !important;
+  bottom: calc(12px + var(--execution-panel-height, 0px)) !important;
+  top: auto !important;
   left: 50% !important;
   right: auto !important;
-  top: auto !important;
   transform: translateX(-50%) !important;
+  transition: bottom 0.2s ease;
   border: 1px solid hsl(var(--border)) !important;
   border-radius: 0.5rem !important;
   overflow: hidden;

@@ -79,6 +79,44 @@ body {
   }
 }
 
+.star-flash {
+  position: absolute;
+  top: 16%;
+  right: 14%;
+  z-index: 0;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.98);
+  clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.75))
+    drop-shadow(0 0 18px rgba(186, 230, 253, 0.55))
+    drop-shadow(0 0 30px rgba(125, 211, 252, 0.35));
+}
+
+.star-flash.is-active {
+  animation: star-flash 0.85s ease-out 1 forwards;
+}
+
+@keyframes star-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-12deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1) rotate(28deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7) rotate(55deg);
+  }
+}
+
 .react-flow {
   background: hsl(var(--background)) !important;
 }

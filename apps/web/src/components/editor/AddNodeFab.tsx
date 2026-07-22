@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 
+import { NODE_TYPE_LABELS } from "@/lib/node-labels";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 const paletteItems: {
@@ -11,9 +12,17 @@ const paletteItems: {
   label: string;
   description: string;
 }[] = [
-  { type: "input", label: "Input", description: "Text and file attachments" },
-  { type: "llm", label: "LLM", description: "Model call" },
-  { type: "output", label: "Output", description: "Display final result" },
+  {
+    type: "input",
+    label: NODE_TYPE_LABELS.input,
+    description: "Prompt",
+  },
+  { type: "llm", label: NODE_TYPE_LABELS.llm, description: "Model call" },
+  {
+    type: "output",
+    label: NODE_TYPE_LABELS.output,
+    description: "Final result",
+  },
 ];
 
 const chipStyles: Record<

@@ -46,15 +46,15 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  IN[Input\n text & files] --> LLM[LLM\n Ollama chat]
-  LLM --> OUT[Output\n final result]
+  IN[Start Point\n text & files] --> LLM[LLM\n Ollama chat]
+  LLM --> OUT[End Point\n final result]
 ```
 
 | Node | Role |
 |------|------|
-| **Input** | Text and attachments (`.docx`, `.pdf`, images, …) |
+| **Start Point** | Text and attachments (`.docx`, `.pdf`, images, …) |
 | **LLM** | Ollama call — receives original input + upstream output |
-| **Output** | Displays the final result |
+| **End Point** | Displays the final result |
 
 Execution order follows the graph (disabled edges are skipped).
 
@@ -69,12 +69,14 @@ flowchart TB
   end
 
   Add["+ FAB"] -->|add nodes| N
-  Wand["Execution FAB"] -->|floating panel| Run[Run · progress · output]
+  Start["Start Point Run"] -->|execute| Panel[floating results panel]
   N -->|select| Insp[Node / edge inspector]
+  N -->|End Point click| Panel
 ```
 
-- **+** — add Input, LLM, or Output nodes  
-- **Execution** — run workflow, live progress chain, final output, collapsible node logs  
+- **+** — add Start Point, LLM, or End Point nodes  
+- **Start Point** — run workflow from the node card (play/stop)  
+- **Results panel** — live progress, final output, collapsible node logs (click End Point to reopen)  
 - **Inspectors** — properties appear next to the selected node or edge  
 
 ## Quick start
@@ -99,7 +101,7 @@ pnpm dev:api
 pnpm dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) → **New Workflow** → edit nodes → **Run**.
+Open [http://localhost:3000](http://localhost:3000) → **New Workflow** → edit nodes → **Run from Start Point**.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

@@ -17,7 +17,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { getNodeDisplayLabel, getNodeTypeLabel, NODE_TYPE_LABELS } from "@/lib/node-labels";
 import { fetchModels } from "@/lib/workflow-api";
+import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 const PANEL_WIDTH = 288;
@@ -292,6 +294,10 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
 
   const { id, type, data } = selectedNode;
   const accent = accentForType(type);
+  const nodeLabel =
+    type != null
+      ? getNodeDisplayLabel(data.label, type as WorkflowNodeType)
+      : { text: data.label || "Node", isPlaceholder: false };
 
   return (
     <NodeToolbar
@@ -313,11 +319,17 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
 
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-white">
-              {data.label || "Node"}
+            <h2
+              className={`text-sm ${
+                nodeLabel.isPlaceholder
+                  ? "font-normal uppercase tracking-wider text-white/35"
+                  : "font-semibold text-white"
+              }`}
+            >
+              {nodeLabel.text}
             </h2>
             <p className="mt-0.5 text-[11px] uppercase tracking-wide text-white/40">
-              {type}
+              {type ? getNodeTypeLabel(type as WorkflowNodeType) : "Node"}
             </p>
           </div>
           <Button
@@ -338,6 +350,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
             <label className="mb-1.5 block text-xs text-white/70">Label</label>
             <Input
               className={fieldClass}
+              placeholder="Label"
               value={data.label}
               onChange={(event) =>
                 updateNodeData(id, { label: event.target.value })
@@ -349,7 +362,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
             <>
               <div>
                 <label className="mb-1.5 block text-xs text-white/70">
-                  Input
+                  {NODE_TYPE_LABELS.input}
                 </label>
                 <Textarea
                   rows={4}

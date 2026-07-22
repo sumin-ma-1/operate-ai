@@ -56,6 +56,8 @@ interface WorkflowState {
   selectedEdgeId: string | null;
   connectSourceId: string | null;
   isRunning: boolean;
+  executionPanelOpen: boolean;
+  executionError: string | null;
   lastResult: ExecuteWorkflowResponse | null;
   executionProgress: ExecutionProgressNode[];
   setWorkflowMeta: (id: string, name: string, updatedAt?: string | null) => void;
@@ -77,6 +79,8 @@ interface WorkflowState {
   loadWorkflow: (workflow: WorkflowDefinition) => void;
   toWorkflowDefinition: () => WorkflowDefinition;
   setRunning: (isRunning: boolean) => void;
+  setExecutionPanelOpen: (open: boolean) => void;
+  setExecutionError: (error: string | null) => void;
   setExecutionProgress: (items: ExecutionProgressNode[]) => void;
   updateExecutionProgress: (
     nodeId: string,
@@ -111,13 +115,13 @@ function createDefaultNode(type: WorkflowNodeType): WorkflowNode {
     case "input":
       return {
         ...base,
-        data: { label: "Input", value: "" },
+        data: { label: "", value: "" },
       };
     case "llm":
       return {
         ...base,
         data: {
-          label: "LLM",
+          label: "",
           model: "gemma4:e4b",
           systemPrompt: "You are a helpful assistant.",
         },
@@ -125,7 +129,7 @@ function createDefaultNode(type: WorkflowNodeType): WorkflowNode {
     case "output":
       return {
         ...base,
-        data: { label: "Output", result: "" },
+        data: { label: "", result: "" },
       };
   }
 }
@@ -140,6 +144,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   selectedEdgeId: null,
   connectSourceId: null,
   isRunning: false,
+  executionPanelOpen: false,
+  executionError: null,
   lastResult: null,
   executionProgress: [],
 
@@ -250,6 +256,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       return;
     }
 
+    // End Point click reopens results panel when available
+    if (clickedType === "output" && state.lastResult) {
+      set({
+        selectedNodeId: nodeId,
+        selectedEdgeId: null,
+        connectSourceId: null,
+        executionPanelOpen: true,
+      });
+      return;
+    }
+
     set({ selectedNodeId: nodeId, selectedEdgeId: null, connectSourceId: null });
   },
 
@@ -317,6 +334,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedNodeId: null,
       selectedEdgeId: null,
       connectSourceId: null,
+      executionPanelOpen: false,
+      executionError: null,
       lastResult: null,
       executionProgress: [],
     }),
@@ -344,6 +363,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   setRunning: (isRunning) => set({ isRunning }),
+
+  setExecutionPanelOpen: (open) => set({ executionPanelOpen: open }),
+
+  setExecutionError: (error) => set({ executionError: error }),
 
   setExecutionProgress: (items) => set({ executionProgress: items }),
 
@@ -382,6 +405,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedEdgeId: null,
       connectSourceId: null,
       isRunning: false,
+      executionPanelOpen: false,
+      executionError: null,
       lastResult: null,
       executionProgress: [],
     }),
@@ -419,6 +444,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedEdgeId: null,
       connectSourceId: null,
       isRunning: false,
+      executionPanelOpen: false,
+      executionError: null,
       lastResult: null,
       executionProgress: [],
     });

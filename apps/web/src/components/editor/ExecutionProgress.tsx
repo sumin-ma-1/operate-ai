@@ -3,6 +3,7 @@
 import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
+import { getNodeDisplayLabel, getNodeTypeLabel } from "@/lib/node-labels";
 
 export type ExecutionNodeStatus = "pending" | "running" | "completed" | "failed";
 
@@ -56,14 +57,7 @@ function labelClass(status: ExecutionNodeStatus) {
 }
 
 function typeLabel(nodeType: WorkflowNodeType) {
-  switch (nodeType) {
-    case "input":
-      return "Input";
-    case "llm":
-      return "LLM";
-    case "output":
-      return "Output";
-  }
+  return getNodeTypeLabel(nodeType);
 }
 
 function connectorClass(status: ExecutionNodeStatus) {
@@ -104,7 +98,10 @@ function statusIconClass(status: ExecutionNodeStatus) {
 export function ExecutionProgress({ items }: ExecutionProgressProps) {
   return (
     <div className="py-1">
-      {items.map((item, index) => (
+      {items.map((item, index) => {
+        const displayLabel = getNodeDisplayLabel(item.label, item.nodeType);
+
+        return (
         <div key={item.nodeId}>
           <div className="relative pl-6">
             <span className="absolute left-0 top-1 flex h-4 w-4 items-center justify-center">
@@ -132,8 +129,14 @@ export function ExecutionProgress({ items }: ExecutionProgressProps) {
                 >
                   {typeLabel(item.nodeType)}
                 </span>
-                <span className={`ml-1.5 ${labelClass(item.status)}`}>
-                  {item.label}
+                <span
+                  className={`ml-1.5 ${
+                    displayLabel.isPlaceholder
+                      ? "font-normal uppercase tracking-wider text-muted/40"
+                      : labelClass(item.status)
+                  }`}
+                >
+                  {displayLabel.text}
                 </span>
               </p>
               {item.status === "running" && item.message && (
@@ -149,7 +152,8 @@ export function ExecutionProgress({ items }: ExecutionProgressProps) {
             />
           )}
         </div>
-      ))}
+      );
+      })}
     </div>
   );
 }

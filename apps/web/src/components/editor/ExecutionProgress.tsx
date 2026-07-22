@@ -2,6 +2,8 @@
 
 import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 
+import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
+
 export type ExecutionNodeStatus = "pending" | "running" | "completed" | "failed";
 
 export interface ExecutionProgressNode {
@@ -77,8 +79,6 @@ function connectorClass(status: ExecutionNodeStatus) {
 
 function statusIcon(status: ExecutionNodeStatus) {
   switch (status) {
-    case "running":
-      return "autorenew";
     case "completed":
       return "check_circle";
     case "failed":
@@ -113,11 +113,11 @@ export function ExecutionProgress({ items }: ExecutionProgressProps) {
                   className={`h-[11px] w-[11px] rounded-full border-2 ${dotClass(item.status)}`}
                   aria-hidden="true"
                 />
+              ) : item.status === "running" ? (
+                <SpinnerIcon size={14} className={statusIconClass(item.status)} />
               ) : (
                 <span
-                  className={`material-icons text-[16px] leading-none ${statusIconClass(item.status)} ${
-                    item.status === "running" ? "animate-spin" : ""
-                  }`}
+                  className={`material-icons text-[16px] leading-none ${statusIconClass(item.status)}`}
                   aria-hidden="true"
                 >
                   {statusIcon(item.status)}

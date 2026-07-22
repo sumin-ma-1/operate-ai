@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
 import { OutputActions } from "@/components/editor/OutputActions";
-import { Button } from "@/components/ui/Button";
+import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import { getExecutionMessage, getExecutionOrder } from "@/lib/execution-order";
 import { executeWorkflowStream } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
+
+function isAbortError(err: unknown) {
+  return err instanceof Error && err.name === "AbortError";
+}
 
 export function ExecutionFab({ children }: { children: ReactNode }) {
   const isRunning = useWorkflowStore((state) => state.isRunning);
@@ -30,6 +34,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const inputNode = nodes.find((node) => node.type === "input");
   const inputValue = inputNode?.data.value || "";
@@ -55,11 +60,23 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
     }
   }, [isRunning]);
 
+  const handleStop = () => {
+    abortRef.current?.abort();
+  };
+
   const handleRun = async () => {
+    if (isRunning) {
+      handleStop();
+      return;
+    }
+
     setError(null);
     clearExecutionProgress();
     setRunning(true);
     setOpen(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const orderedNodes = getExecutionOrder(
       nodes.map((node) => ({
@@ -143,7 +160,8 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
               message: event.error,
             });
           }
-        }
+        },
+        controller.signal
       );
 
       applyExecutionResults(result);
@@ -153,15 +171,20 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
         setError(result.error);
       }
     } catch (err) {
+      clearExecutionProgress();
+      if (isAbortError(err)) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Execution failed");
     } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       setRunning(false);
     }
   };
 
-  const handleFabClick = () => {
-    setOpen((current) => !current);
-  };
+  const showPanel = open && Boolean(error || isRunning || lastResult);
 
   return (
     <div className="relative h-full min-h-0">
@@ -171,52 +194,37 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
         <div className="pointer-events-auto flex max-h-full min-h-0 flex-col items-end">
           <button
             type="button"
-            onClick={handleFabClick}
-            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber-200/50 bg-amber-500/90 text-amber-50 shadow-[0_10px_28px_rgba(217,169,56,0.3)] transition duration-300 hover:border-amber-100/60 hover:bg-amber-400/95 hover:shadow-[0_10px_30px_rgba(234,179,8,0.38)] ${
-              isRunning ? "" : open ? "" : "animate-float"
+            onClick={() => void handleRun()}
+            disabled={!isRunning && nodes.length === 0}
+            title={isRunning ? "Stop" : "Run"}
+            aria-label={isRunning ? "Stop" : "Run"}
+            className={`group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-blue-500/20 bg-blue-800 text-white shadow-[0_2px_12px_rgba(59,130,246,0.28)] transition hover:border-blue-500/30 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 ${
+              isRunning
+                ? "hover:border-red-400/40 hover:bg-red-700/90"
+                : showPanel
+                  ? ""
+                  : "animate-float"
             }`}
-            title={open ? "Close execution" : "Execution"}
-            aria-label={open ? "Close execution" : "Execution"}
-            aria-expanded={open}
           >
-            <span
-              className={`material-icons text-[24px] leading-none ${
-                isRunning ? "animate-spin" : ""
-              }`}
-            >
-              {isRunning ? "autorenew" : "auto_fix_high"}
-            </span>
+            {isRunning ? (
+              <>
+                <span className="group-hover:hidden">
+                  <SpinnerIcon size={20} className="text-white" />
+                </span>
+                <span className="material-icons hidden text-[22px] leading-none group-hover:inline">
+                  stop
+                </span>
+              </>
+            ) : (
+              <span className="material-icons text-[22px] leading-none">
+                play_arrow
+              </span>
+            )}
           </button>
 
-          {open && (
+          {showPanel && (
             <aside className="mt-3 flex h-fit w-[32rem] max-h-[calc(100%-3.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card/95 shadow-xl backdrop-blur-sm">
-              <div className="shrink-0 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold">Execution</p>
-                    <p className="mt-0.5 text-sm text-muted">
-                      Run workflow against Ollama
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleRun}
-                    disabled={isRunning || nodes.length === 0}
-                    className="inline-flex shrink-0 items-center gap-1.5 !rounded-full !border !border-blue-500/20 !bg-blue-800 px-4 py-1.5 text-sm shadow-[0_2px_10px_rgba(59,130,246,0.2)] hover:!border-blue-500/30 hover:!bg-blue-700 hover:!opacity-100"
-                  >
-                    <span
-                      className={`material-icons text-[20px] leading-none ${
-                        isRunning ? "animate-spin" : ""
-                      }`}
-                    >
-                      {isRunning ? "autorenew" : "play_arrow"}
-                    </span>
-                    {isRunning ? "Running" : "Run"}
-                  </Button>
-                </div>
-              </div>
-
-              {(error || isRunning || lastResult) && (
-                <div className="scrollbar-soft min-h-0 space-y-5 overflow-y-auto px-5 pb-5">
+              <div className="scrollbar-soft min-h-0 space-y-5 overflow-y-auto p-5">
                   {error && (
                     <p className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-base text-red-300">
                       {error}
@@ -290,8 +298,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
                       </section>
                     </>
                   )}
-                </div>
-              )}
+              </div>
             </aside>
           )}
         </div>

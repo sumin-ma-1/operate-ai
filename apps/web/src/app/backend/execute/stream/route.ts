@@ -10,6 +10,7 @@ export async function POST(request: Request) {
       Accept: "text/event-stream",
     },
     body,
+    signal: request.signal,
   });
 
   if (!response.ok || !response.body) {

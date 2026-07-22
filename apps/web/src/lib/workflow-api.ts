@@ -119,7 +119,8 @@ export type ExecutionStreamEvent =
 
 export async function executeWorkflowStream(
   payload: ExecuteWorkflowRequest,
-  onEvent: (event: ExecutionStreamEvent) => void
+  onEvent: (event: ExecutionStreamEvent) => void,
+  signal?: AbortSignal
 ): Promise<ExecuteWorkflowResponse> {
   const url = getApiUrl("/execute/stream");
 
@@ -132,8 +133,12 @@ export async function executeWorkflowStream(
         Accept: "text/event-stream",
       },
       body: JSON.stringify(payload),
+      signal,
     });
   } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw err;
+    }
     const reason = err instanceof Error ? err.message : "Network error";
     throw new Error(
       `Failed to reach API at ${url}. Is the API running on port 8000? (${reason})`
@@ -150,43 +155,65 @@ export async function executeWorkflowStream(
   let buffer = "";
   let finalResult: ExecuteWorkflowResponse | null = null;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  const onAbort = () => {
+    void reader.cancel();
+  };
+  signal?.addEventListener("abort", onAbort);
 
-    buffer += decoder.decode(value, { stream: true });
-    const chunks = buffer.split("\n\n");
-    buffer = chunks.pop() || "";
-
-    for (const chunk of chunks) {
-      const line = chunk
-        .split("\n")
-        .find((entry) => entry.startsWith("data: "));
-      if (!line) continue;
-
-      const event = JSON.parse(line.slice(6)) as ExecutionStreamEvent;
-      onEvent(event);
-
-      if (event.type === "completed") {
-        finalResult = {
-          success: event.success,
-          nodeResults: event.nodeResults,
-          finalOutput: event.finalOutput,
-          error: event.error,
-        };
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
       }
 
-      if (event.type === "failed") {
-        throw new Error(event.error);
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop() || "";
+
+      for (const chunk of chunks) {
+        const line = chunk
+          .split("\n")
+          .find((entry) => entry.startsWith("data: "));
+        if (!line) continue;
+
+        const event = JSON.parse(line.slice(6)) as ExecutionStreamEvent;
+        onEvent(event);
+
+        if (event.type === "completed") {
+          finalResult = {
+            success: event.success,
+            nodeResults: event.nodeResults,
+            finalOutput: event.finalOutput,
+            error: event.error,
+          };
+        }
+
+        if (event.type === "failed") {
+          throw new Error(event.error);
+        }
       }
     }
-  }
 
-  if (!finalResult) {
-    throw new Error("Workflow execution ended unexpectedly");
-  }
+    if (signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
-  return finalResult;
+    if (!finalResult) {
+      throw new Error("Workflow execution ended unexpectedly");
+    }
+
+    return finalResult;
+  } catch (err) {
+    if (signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
+    throw err;
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+  }
 }
 
 export async function fetchModels(): Promise<OllamaModel[]> {

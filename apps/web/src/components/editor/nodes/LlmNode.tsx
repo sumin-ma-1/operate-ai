@@ -8,13 +8,9 @@ import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
 type LlmNodeType = Node<WorkflowNodeData, "llm">;
 
-export function LlmNode({ data, selected }: NodeProps<LlmNodeType>) {
+export function LlmNode({ data }: NodeProps<LlmNodeType>) {
   return (
-    <div
-      className={`box-border w-full max-w-full overflow-hidden p-3 text-left ${
-        selected ? "ring-2 ring-violet-400" : ""
-      }`}
-    >
+    <div className="box-border w-full max-w-full overflow-hidden p-3 text-left">
       <Handle type="target" position={Position.Left} />
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-400">
         LLM

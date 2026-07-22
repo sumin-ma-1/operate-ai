@@ -318,10 +318,14 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
           </div>
           <Button
             variant="ghost"
-            className="shrink-0 !px-2 !py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+            className="inline-flex shrink-0 items-center justify-center !rounded-full !px-2 !py-1 !font-normal text-red-300/40 hover:!bg-red-500/10 hover:text-red-300/85"
             onClick={() => removeNode(id)}
+            title="Delete node"
+            aria-label="Delete node"
           >
-            Delete
+            <span className="material-icons text-[16px] leading-none">
+              delete
+            </span>
           </Button>
         </div>
 

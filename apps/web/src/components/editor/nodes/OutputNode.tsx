@@ -8,13 +8,9 @@ import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
 type OutputNodeType = Node<WorkflowNodeData, "output">;
 
-export function OutputNode({ data, selected }: NodeProps<OutputNodeType>) {
+export function OutputNode({ data }: NodeProps<OutputNodeType>) {
   return (
-    <div
-      className={`box-border w-full max-w-full overflow-hidden p-3 text-left ${
-        selected ? "ring-2 ring-emerald-400" : ""
-      }`}
-    >
+    <div className="box-border w-full max-w-full overflow-hidden p-3 text-left">
       <Handle type="target" position={Position.Left} />
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-400">
         Output

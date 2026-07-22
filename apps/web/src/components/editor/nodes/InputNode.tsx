@@ -10,16 +10,12 @@ import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
 type InputNodeType = Node<WorkflowNodeData, "input">;
 
-export function InputNode({ data, selected }: NodeProps<InputNodeType>) {
+export function InputNode({ data }: NodeProps<InputNodeType>) {
   const attachmentSummary = formatAttachmentSummary(data.attachments);
   const preview = data.value || attachmentSummary || "Enter text in property panel";
 
   return (
-    <div
-      className={`box-border w-full max-w-full overflow-hidden p-3 text-left ${
-        selected ? "ring-2 ring-sky-400" : ""
-      }`}
-    >
+    <div className="box-border w-full max-w-full overflow-hidden p-3 text-left">
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-sky-400">
         Input
       </div>

@@ -54,6 +54,7 @@ interface WorkflowState {
   edges: WorkflowEdge[];
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
+  connectSourceId: string | null;
   isRunning: boolean;
   lastResult: ExecuteWorkflowResponse | null;
   executionProgress: ExecutionProgressNode[];
@@ -65,6 +66,9 @@ interface WorkflowState {
   onConnect: (connection: Connection) => void;
   selectNode: (nodeId: string | null) => void;
   selectEdge: (edgeId: string | null) => void;
+  setConnectSource: (nodeId: string | null) => void;
+  handleConnectNodeClick: (nodeId: string) => void;
+  cancelConnect: () => void;
   addNode: (type: WorkflowNodeType) => void;
   updateNodeData: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
   removeNode: (nodeId: string) => void;
@@ -83,6 +87,14 @@ interface WorkflowState {
   applyExecutionResults: (result: ExecuteWorkflowResponse) => void;
   reset: () => void;
   initDefaultWorkflow: (id: string, name: string) => void;
+}
+
+function canBeSource(type: WorkflowNodeType | undefined) {
+  return type === "input" || type === "llm";
+}
+
+function canBeTarget(type: WorkflowNodeType | undefined) {
+  return type === "llm" || type === "output";
 }
 
 let nodeCounter = 1;
@@ -126,6 +138,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   edges: [],
   selectedNodeId: null,
   selectedEdgeId: null,
+  connectSourceId: null,
   isRunning: false,
   lastResult: null,
   executionProgress: [],
@@ -159,7 +172,86 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({ selectedNodeId: nodeId, selectedEdgeId: null }),
 
   selectEdge: (edgeId) =>
-    set({ selectedEdgeId: edgeId, selectedNodeId: null }),
+    set({ selectedEdgeId: edgeId, selectedNodeId: null, connectSourceId: null }),
+
+  setConnectSource: (nodeId) => set({ connectSourceId: nodeId }),
+
+  cancelConnect: () => set({ connectSourceId: null }),
+
+  handleConnectNodeClick: (nodeId) => {
+    const state = get();
+    const clicked = state.nodes.find((node) => node.id === nodeId);
+    if (!clicked) return;
+
+    const clickedType = clicked.type as WorkflowNodeType;
+
+    // Already connecting from a source node
+    if (state.connectSourceId) {
+      if (state.connectSourceId === nodeId) {
+        set({ connectSourceId: null, selectedNodeId: nodeId, selectedEdgeId: null });
+        return;
+      }
+
+      const source = state.nodes.find((node) => node.id === state.connectSourceId);
+      const sourceType = source?.type as WorkflowNodeType | undefined;
+
+      if (
+        source &&
+        canBeSource(sourceType) &&
+        canBeTarget(clickedType) &&
+        !state.edges.some(
+          (edge) =>
+            edge.source === state.connectSourceId && edge.target === nodeId
+        )
+      ) {
+        set({
+          edges: addEdge(
+            {
+              source: state.connectSourceId,
+              target: nodeId,
+              sourceHandle: null,
+              targetHandle: null,
+              data: { disabled: false },
+            },
+            state.edges
+          ).map(styleEdge),
+          connectSourceId: null,
+          selectedNodeId: nodeId,
+          selectedEdgeId: null,
+        });
+        return;
+      }
+
+      // Invalid target: restart connect from this node if it can be a source
+      if (canBeSource(clickedType)) {
+        set({
+          connectSourceId: nodeId,
+          selectedNodeId: nodeId,
+          selectedEdgeId: null,
+        });
+        return;
+      }
+
+      set({
+        connectSourceId: null,
+        selectedNodeId: nodeId,
+        selectedEdgeId: null,
+      });
+      return;
+    }
+
+    // Start connect mode from a source-capable node
+    if (canBeSource(clickedType)) {
+      set({
+        connectSourceId: nodeId,
+        selectedNodeId: nodeId,
+        selectedEdgeId: null,
+      });
+      return;
+    }
+
+    set({ selectedNodeId: nodeId, selectedEdgeId: null, connectSourceId: null });
+  },
 
   addNode: (type) =>
     set((state) => ({
@@ -183,6 +275,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       ),
       selectedNodeId:
         state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+      connectSourceId:
+        state.connectSourceId === nodeId ? null : state.connectSourceId,
       selectedEdgeId: null,
     })),
 
@@ -222,6 +316,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       ),
       selectedNodeId: null,
       selectedEdgeId: null,
+      connectSourceId: null,
       lastResult: null,
       executionProgress: [],
     }),
@@ -285,6 +380,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: [],
       selectedNodeId: null,
       selectedEdgeId: null,
+      connectSourceId: null,
       isRunning: false,
       lastResult: null,
       executionProgress: [],
@@ -321,6 +417,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       ],
       selectedNodeId: null,
       selectedEdgeId: null,
+      connectSourceId: null,
       isRunning: false,
       lastResult: null,
       executionProgress: [],

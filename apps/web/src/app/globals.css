@@ -167,6 +167,26 @@ body {
   @apply !h-3 !w-3 !border-2 !border-primary !bg-background;
 }
 
+.react-flow.is-connecting {
+  cursor: crosshair;
+}
+
+.react-flow__node.is-connect-source {
+  box-shadow:
+    0 0 0 2px rgb(56 189 248 / 0.85),
+    0 0 24px rgb(56 189 248 / 0.35) !important;
+}
+
+.react-flow__node.is-connect-target {
+  box-shadow:
+    0 0 0 2px rgb(52 211 153 / 0.7),
+    0 0 18px rgb(52 211 153 / 0.25) !important;
+}
+
+.react-flow.is-connecting .react-flow__node.is-connect-target .react-flow__handle-target {
+  transform: scale(1.35);
+}
+
 /* Zoom controls: horizontal bar centered at bottom */
 .react-flow__controls {
   display: flex !important;

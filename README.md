@@ -4,7 +4,8 @@
 </h1>
 
 <p align="center">
-  A visual editor for easily building AI agents and LLM workflows
+  A visual editor for easily building AI agents and LLM workflows.
+  <br> An open space for any agentic flow you envision.
 </p>
 
 <p align="center">

@@ -92,7 +92,7 @@ export default function HomePage() {
             {workflows.map((workflow) => (
             <Card
               key={workflow.id}
-              className="flex h-full flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:shadow-[0_0_20px_rgba(56,189,248,0.12)]"
+              className="flex h-full flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:bg-slate-800/70 hover:shadow-[0_0_20px_rgba(56,189,248,0.12)]"
             >
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold">{workflow.name}</h2>

@@ -12,6 +12,7 @@ import "@xyflow/react/dist/style.css";
 
 import { AddNodeFab } from "@/components/editor/AddNodeFab";
 import { ExecutionFab } from "@/components/editor/ExecutionFab";
+import { MiniMapEdges } from "@/components/editor/MiniMapEdges";
 import { NodeInspector } from "@/components/editor/NodeInspector";
 import { nodeTypes } from "@/components/editor/nodes";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -124,6 +125,7 @@ function WorkflowCanvas() {
             }
           }}
         />
+        <MiniMapEdges />
         <NodeInspector />
       </ReactFlow>
 

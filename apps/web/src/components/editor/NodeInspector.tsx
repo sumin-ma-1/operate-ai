@@ -333,7 +333,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
           </Button>
         </div>
 
-        <div className="mt-4 max-h-[min(60vh,420px)] space-y-4 overflow-y-auto pr-0.5 scrollbar-soft">
+        <div className="mt-4 max-h-[min(60vh,420px)] space-y-4 overflow-y-auto pr-0.5 scrollbar-none">
           <div>
             <label className="mb-1.5 block text-xs text-white/70">Label</label>
             <Input
@@ -353,7 +353,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                 </label>
                 <Textarea
                   rows={4}
-                  className={`${fieldClass} scrollbar-soft`}
+                  className={`${fieldClass} scrollbar-none`}
                   placeholder="Type something..."
                   value={data.value || ""}
                   onChange={(event) =>
@@ -394,7 +394,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                 </label>
                 <Textarea
                   rows={3}
-                  className={`${fieldClass} scrollbar-soft`}
+                  className={`${fieldClass} scrollbar-none`}
                   value={data.systemPrompt || ""}
                   onChange={(event) =>
                     updateNodeData(id, { systemPrompt: event.target.value })
@@ -416,7 +416,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
               <Textarea
                 rows={8}
                 readOnly
-                className={`${fieldClass} scrollbar-soft`}
+                className={`${fieldClass} scrollbar-none`}
                 value={data.result || ""}
               />
             </div>

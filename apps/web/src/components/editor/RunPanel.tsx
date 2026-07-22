@@ -198,7 +198,7 @@ export function RunPanel() {
                   filename={workflowName || "output"}
                 />
               </div>
-              <pre className="scrollbar-soft mt-2 max-h-80 overflow-auto rounded-md border border-border bg-background p-3 text-sm whitespace-pre-wrap">
+              <pre className="scrollbar-none mt-2 max-h-80 overflow-auto rounded-md border border-border bg-background p-3 text-sm whitespace-pre-wrap">
                 {lastResult.finalOutput || "(empty)"}
               </pre>
             </div>
@@ -207,7 +207,7 @@ export function RunPanel() {
               <h4 className="shrink-0 text-xs font-semibold uppercase text-muted">
                 Node Logs
               </h4>
-              <div className="scrollbar-soft mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+              <div className="scrollbar-none mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {lastResult.nodeResults.map((result) => {
                   const label =
                     nodes.find((node) => node.id === result.nodeId)?.data.label ||
@@ -221,7 +221,7 @@ export function RunPanel() {
                     >
                       <span className="font-medium">{label}</span>
                       <span className="text-muted"> ({typeLabel})</span>
-                      <pre className="scrollbar-soft mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-muted">
+                      <pre className="scrollbar-none mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-muted">
                         {result.output || "(empty)"}
                       </pre>
                     </div>

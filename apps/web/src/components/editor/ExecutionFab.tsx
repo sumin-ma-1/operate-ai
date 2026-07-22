@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
 import { OutputActions } from "@/components/editor/OutputActions";
+import { ScrollFade } from "@/components/ui/ScrollFade";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import { getExecutionMessage, getExecutionOrder } from "@/lib/execution-order";
 import { executeWorkflowStream } from "@/lib/workflow-api";
@@ -223,8 +224,8 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
           </button>
 
           {showPanel && (
-            <aside className="mt-3 flex h-fit w-[32rem] max-h-[calc(100%-3.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card/95 shadow-xl backdrop-blur-sm">
-              <div className="scrollbar-soft min-h-0 space-y-5 overflow-y-auto p-5">
+            <aside className="mt-3 flex w-[32rem] max-h-[calc(100%-3.5rem)] min-h-0 flex-col overflow-hidden rounded-2xl border border-sky-400/15 bg-slate-950/88 shadow-xl backdrop-blur-md">
+              <ScrollFade className="space-y-5 p-5">
                   {error && (
                     <p className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-base text-red-300">
                       {error}
@@ -237,7 +238,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
 
                   {lastResult && (
                     <>
-                      <section className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4">
+                      <section>
                         <div className="flex items-center justify-between gap-2">
                           <h4 className="text-sm font-semibold uppercase tracking-wide text-emerald-300/90">
                             Final Output
@@ -247,7 +248,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
                             filename={workflowName || "output"}
                           />
                         </div>
-                        <pre className="scrollbar-soft mt-3 overflow-auto rounded-lg border border-border/60 bg-background/80 p-3 text-base whitespace-pre-wrap">
+                        <pre className="mt-3 overflow-auto rounded-lg border border-border/60 bg-background/80 p-3 text-base whitespace-pre-wrap scrollbar-none">
                           {lastResult.finalOutput || "(empty)"}
                         </pre>
                       </section>
@@ -256,18 +257,18 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
                         <button
                           type="button"
                           onClick={() => setLogsOpen((current) => !current)}
-                          className="flex w-full items-center gap-2 text-left"
+                          className="flex w-full items-center gap-1.5 px-1 text-left"
                           aria-expanded={logsOpen}
                         >
-                          <span className="material-icons text-[20px] leading-none text-muted">
+                          <span className="material-icons text-[16px] leading-none text-muted">
                             {logsOpen ? "expand_less" : "expand_more"}
                           </span>
-                          <h4 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
                             Node Logs
                           </h4>
                         </button>
                         {logsOpen && (
-                          <div className="scrollbar-soft mt-3 space-y-2 pr-1">
+                          <div className="mt-3 space-y-2">
                             {lastResult.nodeResults.map((result) => {
                               const label =
                                 nodes.find((node) => node.id === result.nodeId)?.data
@@ -287,7 +288,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
                                 >
                                   <span className="font-medium">{label}</span>
                                   <span className="text-muted"> ({typeLabel})</span>
-                                  <pre className="scrollbar-soft mt-1 overflow-auto whitespace-pre-wrap text-sm text-muted">
+                                  <pre className="mt-1 overflow-auto whitespace-pre-wrap text-sm text-muted scrollbar-none">
                                     {result.output || "(empty)"}
                                   </pre>
                                 </div>
@@ -298,7 +299,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
                       </section>
                     </>
                   )}
-              </div>
+              </ScrollFade>
             </aside>
           )}
         </div>

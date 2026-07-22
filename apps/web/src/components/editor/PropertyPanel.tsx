@@ -191,7 +191,7 @@ export function PropertyPanel() {
             <Textarea
               rows={16}
               readOnly
-              className="scrollbar-soft"
+              className="scrollbar-none"
               value={data.result || ""}
             />
           </div>

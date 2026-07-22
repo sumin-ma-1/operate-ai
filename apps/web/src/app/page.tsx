@@ -115,7 +115,7 @@ export default function HomePage() {
                     {workflow.updatedAt &&
                       workflow.updatedAt !== workflow.createdAt && (
                         <p className="mt-1 text-xs text-muted">
-                          Updated:{" "}
+                          Updated at {" "}
                           {new Date(workflow.updatedAt).toLocaleString()}
                         </p>
                       )}
@@ -128,7 +128,7 @@ export default function HomePage() {
                             : "mt-1"
                         }`}
                       >
-                        Created: {new Date(workflow.createdAt).toLocaleString()}
+                        Created at {new Date(workflow.createdAt).toLocaleString()}
                       </p>
                     )}
                   </div>

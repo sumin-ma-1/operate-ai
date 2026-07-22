@@ -49,6 +49,7 @@ function styleEdge(edge: WorkflowEdge): WorkflowEdge {
 interface WorkflowState {
   workflowId: string;
   workflowName: string;
+  updatedAt: string | null;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   selectedNodeId: string | null;
@@ -56,7 +57,7 @@ interface WorkflowState {
   isRunning: boolean;
   lastResult: ExecuteWorkflowResponse | null;
   executionProgress: ExecutionProgressNode[];
-  setWorkflowMeta: (id: string, name: string) => void;
+  setWorkflowMeta: (id: string, name: string, updatedAt?: string | null) => void;
   setNodes: (nodes: WorkflowNode[]) => void;
   setEdges: (edges: WorkflowEdge[]) => void;
   onNodesChange: (changes: NodeChange<WorkflowNode>[]) => void;
@@ -120,6 +121,7 @@ function createDefaultNode(type: WorkflowNodeType): WorkflowNode {
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   workflowId: "",
   workflowName: "Untitled Workflow",
+  updatedAt: null,
   nodes: [],
   edges: [],
   selectedNodeId: null,
@@ -128,7 +130,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   lastResult: null,
   executionProgress: [],
 
-  setWorkflowMeta: (id, name) => set({ workflowId: id, workflowName: name }),
+  setWorkflowMeta: (id, name, updatedAt) =>
+    set((state) => ({
+      workflowId: id,
+      workflowName: name,
+      updatedAt: updatedAt === undefined ? state.updatedAt : updatedAt,
+    })),
 
   setNodes: (nodes) => set({ nodes }),
 
@@ -201,6 +208,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       workflowId: workflow.id,
       workflowName: workflow.name,
+      updatedAt: workflow.updatedAt || workflow.createdAt || null,
       nodes: workflow.nodes as WorkflowNode[],
       edges: workflow.edges.map((edge) =>
         styleEdge({
@@ -272,6 +280,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       workflowId: "",
       workflowName: "Untitled Workflow",
+      updatedAt: null,
       nodes: [],
       edges: [],
       selectedNodeId: null,
@@ -294,6 +303,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set({
       workflowId: id,
       workflowName: name,
+      updatedAt: null,
       nodes: [inputNode, llmNode, outputNode],
       edges: [
         styleEdge({

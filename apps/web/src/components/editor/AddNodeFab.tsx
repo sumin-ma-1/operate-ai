@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 
 import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 
 import { NODE_TYPE_LABELS } from "@/lib/node-labels";
 import { useWorkflowStore } from "@/stores/workflowStore";
+
+export const PALETTE_DRAG_MIME = "application/operate-ai-node";
 
 const paletteItems: {
   kind: "node" | "loop-draw";
@@ -70,11 +72,13 @@ export function AddNodeFab() {
   const loopDrawMode = useWorkflowStore((state) => state.loopDrawMode);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
 
     const handlePointerDown = (event: MouseEvent) => {
+      if (draggingRef.current) return;
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -93,6 +97,40 @@ export function AddNodeFab() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
+
+  const dragGhostRef = useRef<HTMLElement | null>(null);
+
+  const onPaletteDragStart = (
+    event: DragEvent<HTMLButtonElement>,
+    type: WorkflowNodeType
+  ) => {
+    draggingRef.current = true;
+    event.dataTransfer.setData(PALETTE_DRAG_MIME, type);
+    event.dataTransfer.effectAllowed = "move";
+
+    const chip = event.currentTarget.querySelector<HTMLElement>("[data-palette-chip]");
+    if (!chip) return;
+
+    const ghost = chip.cloneNode(true) as HTMLElement;
+    ghost.removeAttribute("data-palette-chip");
+    ghost.style.position = "fixed";
+    ghost.style.top = "-9999px";
+    ghost.style.left = "-9999px";
+    ghost.style.margin = "0";
+    ghost.style.pointerEvents = "none";
+    ghost.style.zIndex = "9999";
+    document.body.appendChild(ghost);
+    dragGhostRef.current = ghost;
+
+    const { width, height } = chip.getBoundingClientRect();
+    event.dataTransfer.setDragImage(ghost, width / 2, height / 2);
+  };
+
+  const onPaletteDragEnd = () => {
+    draggingRef.current = false;
+    dragGhostRef.current?.remove();
+    dragGhostRef.current = null;
+  };
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute top-4 left-4 z-20">
@@ -121,23 +159,34 @@ export function AddNodeFab() {
                   item.kind === "loop-draw"
                     ? chipStyles.loop
                     : chipStyles[item.type!];
+                const isNode = item.kind === "node" && item.type;
 
                 return (
                   <button
                     key={item.label}
                     type="button"
-                    className={`w-full rounded-md border px-3 py-2 text-left transition ${styles.container}`}
+                    draggable={Boolean(isNode)}
+                    className={`w-full rounded-md border px-3 py-2 text-left transition ${styles.container} ${
+                      isNode ? "cursor-grab active:cursor-grabbing" : ""
+                    }`}
+                    onDragStart={
+                      isNode
+                        ? (event) => onPaletteDragStart(event, item.type!)
+                        : undefined
+                    }
+                    onDragEnd={isNode ? onPaletteDragEnd : undefined}
                     onClick={() => {
                       if (item.kind === "loop-draw") {
                         startLoopDrawMode();
+                        setOpen(false);
                       } else if (item.type) {
                         addNode(item.type);
                       }
-                      setOpen(false);
                     }}
                   >
                     <div className="flex items-center gap-2">
                       <span
+                        data-palette-chip
                         className={`inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${styles.badge}`}
                       >
                         {item.label}

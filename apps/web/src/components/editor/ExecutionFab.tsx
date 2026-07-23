@@ -136,11 +136,12 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const userResizedRef = useRef(false);
+  // Keep panel below MiniMap (top:12 + ~150px) with a small gap.
   const { height, setHeight, onResizeStart, maxHeight } = useResizableHeight({
     defaultHeight: 160,
     minHeight: 96,
     containerRef,
-    topReserve: 40,
+    topReserve: 200,
     storageKey: "execution-panel-height",
     userResizedRef,
   });

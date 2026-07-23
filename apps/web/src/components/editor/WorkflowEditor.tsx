@@ -1,23 +1,29 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, type DragEvent } from "react";
 import {
   Background,
   Controls,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { AddNodeFab } from "@/components/editor/AddNodeFab";
+import { AddNodeFab, PALETTE_DRAG_MIME } from "@/components/editor/AddNodeFab";
 import { ExecutionFab } from "@/components/editor/ExecutionFab";
 import { LoopDrawOverlay } from "@/components/editor/LoopDrawOverlay";
 import { MiniMapEdges } from "@/components/editor/MiniMapEdges";
 import { NodeInspector } from "@/components/editor/NodeInspector";
 import { nodeTypes } from "@/components/editor/nodes";
+import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 import { canBeTarget, isInnerNode } from "@/stores/workflowStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
+
+const DROP_NODE_WIDTH = 220;
+const DROP_NODE_HEIGHT = 96;
+const CONNECT_CLICK_DELAY_MS = 220;
 
 function WorkflowCanvas() {
   const nodes = useWorkflowStore((state) => state.nodes);
@@ -35,6 +41,21 @@ function WorkflowCanvas() {
   );
   const cancelConnect = useWorkflowStore((state) => state.cancelConnect);
   const selectNode = useWorkflowStore((state) => state.selectNode);
+  const addNode = useWorkflowStore((state) => state.addNode);
+  const { screenToFlowPosition } = useReactFlow();
+  const connectClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const clearConnectClickTimer = useCallback(() => {
+    if (connectClickTimerRef.current == null) return;
+    clearTimeout(connectClickTimerRef.current);
+    connectClickTimerRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => clearConnectClickTimer();
+  }, [clearConnectClickTimer]);
 
   useEffect(() => {
     if (!connectSourceId) return;
@@ -48,6 +69,33 @@ function WorkflowCanvas() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [connectSourceId, cancelConnect]);
+
+  const onDragOver = useCallback((event: DragEvent) => {
+    if (!event.dataTransfer.types.includes(PALETTE_DRAG_MIME)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault();
+      if (loopDrawMode) return;
+
+      const type = event.dataTransfer.getData(PALETTE_DRAG_MIME) as WorkflowNodeType;
+      if (type !== "input" && type !== "llm" && type !== "output") return;
+
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      addNode(type, {
+        x: position.x - DROP_NODE_WIDTH / 2,
+        y: position.y - DROP_NODE_HEIGHT / 2,
+      });
+    },
+    [addNode, loopDrawMode, screenToFlowPosition]
+  );
 
   const nodesWithSelection = nodes.map((node) => {
     const isConnectSource = node.id === connectSourceId;
@@ -99,21 +147,49 @@ function WorkflowCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         onNodeClick={(_, node) => {
           if (loopDrawMode) return;
-          handleConnectNodeClick(node.id);
+
+          const isConnecting = Boolean(
+            useWorkflowStore.getState().connectSourceId
+          );
+
+          // Already connecting: complete / switch immediately.
+          if (isConnecting) {
+            clearConnectClickTimer();
+            handleConnectNodeClick(node.id);
+            return;
+          }
+
+          // Delay so a double-click can open the edit panel instead.
+          clearConnectClickTimer();
+          connectClickTimerRef.current = setTimeout(() => {
+            connectClickTimerRef.current = null;
+            handleConnectNodeClick(node.id);
+          }, CONNECT_CLICK_DELAY_MS);
+        }}
+        onNodeDoubleClick={(_, node) => {
+          if (loopDrawMode) return;
+          clearConnectClickTimer();
+          cancelConnect();
+          selectNode(node.id);
         }}
         onEdgeClick={(_, edge) => {
           if (loopDrawMode) return;
+          clearConnectClickTimer();
           selectEdge(edge.id);
         }}
         onPaneClick={() => {
           if (loopDrawMode) return;
+          clearConnectClickTimer();
           cancelConnect();
           selectNode(null);
           selectEdge(null);
         }}
         onNodesDelete={() => {
+          clearConnectClickTimer();
           cancelConnect();
           selectNode(null);
         }}
@@ -126,7 +202,7 @@ function WorkflowCanvas() {
         panOnDrag={loopDrawMode ? false : [1, 2]}
         zoomOnScroll={!loopDrawMode}
         zoomOnPinch={!loopDrawMode}
-        zoomOnDoubleClick={!loopDrawMode}
+        zoomOnDoubleClick={false}
         defaultEdgeOptions={{
           style: { stroke: "#60a5fa" },
         }}

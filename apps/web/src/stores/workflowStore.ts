@@ -84,7 +84,7 @@ interface WorkflowState {
   setConnectSource: (nodeId: string | null) => void;
   handleConnectNodeClick: (nodeId: string) => void;
   cancelConnect: () => void;
-  addNode: (type: WorkflowNodeType) => void;
+  addNode: (type: WorkflowNodeType, position?: { x: number; y: number }) => void;
   startLoopDrawMode: () => void;
   cancelLoopDrawMode: () => void;
   completeLoopDraw: (bounds: FlowRect) => void;
@@ -152,12 +152,18 @@ function isValidConnection(source: WorkflowNode, target: WorkflowNode) {
 
 let nodeCounter = 1;
 
-function createDefaultNode(type: WorkflowNodeType): WorkflowNode {
+function createDefaultNode(
+  type: WorkflowNodeType,
+  position?: { x: number; y: number }
+): WorkflowNode {
   const id = `${type}-${nodeCounter++}`;
   const base = {
     id,
     type,
-    position: { x: 100 + nodeCounter * 40, y: 100 + nodeCounter * 20 },
+    position: position ?? {
+      x: 100 + nodeCounter * 40,
+      y: 100 + nodeCounter * 20,
+    },
   };
 
   switch (type) {
@@ -308,7 +314,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       if (state.connectSourceId === nodeId) {
         set({
           connectSourceId: null,
-          selectedNodeId: nodeId,
           selectedEdgeId: null,
         });
         return;
@@ -335,7 +340,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             state.edges
           ).map(styleEdge),
           connectSourceId: null,
-          selectedNodeId: nodeId,
           selectedEdgeId: null,
         });
         return;
@@ -344,7 +348,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       if (canBeSource(clickedType)) {
         set({
           connectSourceId: nodeId,
-          selectedNodeId: nodeId,
           selectedEdgeId: null,
         });
         return;
@@ -352,7 +355,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
       set({
         connectSourceId: null,
-        selectedNodeId: nodeId,
         selectedEdgeId: null,
       });
       return;
@@ -361,7 +363,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (canBeSource(clickedType)) {
       set({
         connectSourceId: nodeId,
-        selectedNodeId: nodeId,
         selectedEdgeId: null,
       });
       return;
@@ -369,24 +370,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     if (clickedType === "output" && state.lastResult) {
       set({
-        selectedNodeId: nodeId,
         selectedEdgeId: null,
         connectSourceId: null,
         executionPanelOpen: true,
       });
-      return;
     }
-
-    set({
-      selectedNodeId: nodeId,
-      selectedEdgeId: null,
-      connectSourceId: null,
-    });
   },
 
-  addNode: (type) =>
+  addNode: (type, position) =>
     set((state) => ({
-      nodes: [...state.nodes, createDefaultNode(type)],
+      nodes: [...state.nodes, createDefaultNode(type, position)],
     })),
 
   startLoopDrawMode: () =>

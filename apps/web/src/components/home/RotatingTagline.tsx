@@ -7,7 +7,7 @@ const TAGLINES = [
   "Design, connect, and run intelligent pipelines",
   "Turn ideas into agent workflows you can operate anytime",
   "Build LLM systems node by node, visually",
-  "From prompt to production-ready agent flows",
+  "See the workflow trace every action your agents take",
 ];
 
 const INTERVAL_MS = 11000;

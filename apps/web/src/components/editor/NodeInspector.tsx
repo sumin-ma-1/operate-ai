@@ -530,6 +530,27 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                   }}
                 />
               </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-white/70">
+                  Checker model
+                </label>
+                <Select
+                  className={fieldClass}
+                  value={data.checkerModel || data.model || "gemma4:e4b"}
+                  onChange={(event) =>
+                    updateNodeData(id, { checkerModel: event.target.value })
+                  }
+                >
+                  {models.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-1.5 text-[11px] text-white/35">
+                  LLM used to decide when the goal is met
+                </p>
+              </div>
             </>
           )}
 

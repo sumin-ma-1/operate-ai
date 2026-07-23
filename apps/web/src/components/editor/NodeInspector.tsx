@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { getNodeDisplayLabel, getNodeTypeLabel, NODE_TYPE_LABELS } from "@/lib/node-labels";
+import { getNodeDisplayLabel, getNodeTypeLabel } from "@/lib/node-labels";
 import { fetchModels } from "@/lib/workflow-api";
 import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -392,7 +392,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
             <>
               <div>
                 <label className="mb-1.5 block text-xs text-white/70">
-                  {NODE_TYPE_LABELS.input}
+                  Workflow Input
                 </label>
                 <Textarea
                   rows={4}
@@ -504,7 +504,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
           {type === "output" && (
             <div>
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <label className="block text-xs text-white/70">Result</label>
+                <label className="block text-xs text-white/70">Final Output</label>
                 <OutputActions
                   content={data.result || ""}
                   filename={data.label || "output"}

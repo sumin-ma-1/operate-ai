@@ -45,7 +45,7 @@ def collect_upstream_images(
                 if attachment.kind == "image"
             ]
 
-        if source.type == "llm":
+        if source.type in {"llm", "approval", "loop"}:
             return collect_upstream_images(source.id, nodes, edges, active_edges)
 
     return []

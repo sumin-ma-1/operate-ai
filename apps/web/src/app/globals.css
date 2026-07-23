@@ -142,7 +142,8 @@ body {
 
 .react-flow__node-input,
 .react-flow__node-output,
-.react-flow__node-llm {
+.react-flow__node-llm,
+.react-flow__node-approval {
   width: 220px !important;
   max-width: 220px !important;
 }
@@ -169,6 +170,10 @@ body {
 
 .react-flow__node-output {
   border-color: rgb(52 211 153) !important; /* emerald-400 */
+}
+
+.react-flow__node-approval {
+  border-color: rgb(251 113 133) !important; /* rose-400 */
 }
 
 .react-flow__node .text-muted {

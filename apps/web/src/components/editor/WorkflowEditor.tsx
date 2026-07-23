@@ -82,7 +82,14 @@ function WorkflowCanvas() {
       if (loopDrawMode) return;
 
       const type = event.dataTransfer.getData(PALETTE_DRAG_MIME) as WorkflowNodeType;
-      if (type !== "input" && type !== "llm" && type !== "output") return;
+      if (
+        type !== "input" &&
+        type !== "llm" &&
+        type !== "output" &&
+        type !== "approval"
+      ) {
+        return;
+      }
 
       const position = screenToFlowPosition({
         x: event.clientX,
@@ -99,7 +106,7 @@ function WorkflowCanvas() {
 
   const nodesWithSelection = nodes.map((node) => {
     const isConnectSource = node.id === connectSourceId;
-    const nodeType = node.type as "input" | "llm" | "output" | "loop";
+    const nodeType = node.type as WorkflowNodeType;
     const connectSource = connectSourceId
       ? nodes.find((item) => item.id === connectSourceId)
       : null;
@@ -232,6 +239,8 @@ function WorkflowCanvas() {
                 return "#34d399";
               case "loop":
                 return "#fbbf24";
+              case "approval":
+                return "#fb7185";
               default:
                 return "#94a3b8";
             }
@@ -244,7 +253,7 @@ function WorkflowCanvas() {
       {connectSourceId && (
         <div className="pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2">
           <div className="rounded-full border border-sky-400/40 bg-slate-900/90 px-4 py-1.5 text-sm text-sky-100 shadow-lg backdrop-blur-sm">
-            Click a target node to connect or double click to edit
+            Click a target node to connect · Double click to edit the node
           </div>
         </div>
       )}

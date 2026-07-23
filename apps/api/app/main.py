@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from app.schemas import (
+    ApprovalDecisionRequest,
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
     WorkflowDefinition,
@@ -10,6 +11,7 @@ from app.schemas import (
 )
 from app.services.executor import DAGExecutor
 from app.services.ollama import OllamaService
+from app.services.run_registry import run_registry
 from app.services.workflow_store import WorkflowStore
 
 app = FastAPI(title="Operate-AI API", version="0.1.0")
@@ -64,6 +66,21 @@ async def execute_workflow_stream(request: ExecuteWorkflowRequest) -> StreamingR
             "Connection": "keep-alive",
         },
     )
+
+
+@app.post("/execute/decision")
+async def submit_approval_decision(request: ApprovalDecisionRequest) -> dict[str, bool]:
+    try:
+        run_registry.submit_decision(
+            request.run_id,
+            request.action,
+            request.edited_content,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True}
 
 
 @app.post(

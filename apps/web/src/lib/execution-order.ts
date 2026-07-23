@@ -75,5 +75,8 @@ export function getExecutionMessage(
   if (nodeType === "loop") {
     return "Running agent loop until goal";
   }
+  if (nodeType === "approval") {
+    return "Waiting for user approval";
+  }
   return "Running node";
 }

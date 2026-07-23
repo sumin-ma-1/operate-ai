@@ -1,4 +1,6 @@
+import asyncio
 import json
+import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -16,6 +18,7 @@ from app.services.input_content import (
 )
 from app.services.loop_executor import LoopExecutor
 from app.services.ollama import OllamaService
+from app.services.run_registry import run_registry
 
 
 class DAGExecutor:
@@ -77,6 +80,8 @@ class DAGExecutor:
             return "Collecting final output"
         if node.type == "loop":
             return "Running agent loop until goal"
+        if node.type == "approval":
+            return "Waiting for user approval"
         return "Running node"
 
     async def execute_stream(
@@ -87,143 +92,212 @@ class DAGExecutor:
         node_outputs: dict[str, str] = {}
         original_input_text = ""
         final_output = ""
+        run_id = run_registry.create_run(request.run_id or str(uuid.uuid4()))
 
         outer_nodes = self._outer_nodes(workflow.nodes)
 
         try:
             sorted_nodes = self._topological_sort(outer_nodes, workflow.edges)
         except ValueError as exc:
+            run_registry.discard(run_id)
             yield {"type": "failed", "error": str(exc)}
             return
 
-        yield {
-            "type": "started",
-            "nodes": [
-                {
+        try:
+            yield {
+                "type": "started",
+                "runId": run_id,
+                "nodes": [
+                    {
+                        "nodeId": node.id,
+                        "nodeType": node.type,
+                        "label": node.data.label,
+                    }
+                    for node in sorted_nodes
+                ],
+            }
+
+            for node in sorted_nodes:
+                yield {
+                    "type": "node_started",
                     "nodeId": node.id,
                     "nodeType": node.type,
                     "label": node.data.label,
+                    "message": self._node_message(node),
                 }
-                for node in sorted_nodes
-            ],
-        }
 
-        for node in sorted_nodes:
-            yield {
-                "type": "node_started",
-                "nodeId": node.id,
-                "nodeType": node.type,
-                "label": node.data.label,
-                "message": self._node_message(node),
-            }
+                output = ""
 
-            output = ""
+                if node.type == "input":
+                    try:
+                        output = build_input_text(node, request.input)
+                        original_input_text = output
+                    except ValueError as exc:
+                        yield {
+                            "type": "node_failed",
+                            "nodeId": node.id,
+                            "error": str(exc),
+                        }
+                        yield {"type": "failed", "error": str(exc)}
+                        return
 
-            if node.type == "input":
-                try:
-                    output = build_input_text(node, request.input)
-                    original_input_text = output
-                except ValueError as exc:
-                    yield {
-                        "type": "node_failed",
-                        "nodeId": node.id,
-                        "error": str(exc),
-                    }
-                    yield {"type": "failed", "error": str(exc)}
-                    return
-
-            elif node.type == "llm":
-                active_edges = self._active_edges(workflow.edges)
-                upstream_output = self._get_upstream_output(
-                    node.id, workflow.edges, node_outputs
-                )
-                upstream_source = get_upstream_source(
-                    node.id, workflow.nodes, active_edges
-                )
-                user_prompt = build_llm_user_prompt(
-                    original_input_text,
-                    upstream_output,
-                    upstream_source.type if upstream_source else None,
-                )
-                model = node.data.model or "gemma4:e4b"
-                images = collect_upstream_images(
-                    node.id, workflow.nodes, workflow.edges, active_edges
-                )
-
-                try:
-                    output = await self.ollama.chat(
-                        model=model,
-                        user_message=user_prompt,
-                        system_message=node.data.system_prompt,
-                        images=images or None,
+                elif node.type == "llm":
+                    active_edges = self._active_edges(workflow.edges)
+                    upstream_output = self._get_upstream_output(
+                        node.id, workflow.edges, node_outputs
                     )
-                except Exception as exc:
+                    upstream_source = get_upstream_source(
+                        node.id, workflow.nodes, active_edges
+                    )
+                    user_prompt = build_llm_user_prompt(
+                        original_input_text,
+                        upstream_output,
+                        upstream_source.type if upstream_source else None,
+                    )
+                    model = node.data.model or "gemma4:e4b"
+                    images = collect_upstream_images(
+                        node.id, workflow.nodes, workflow.edges, active_edges
+                    )
+
+                    try:
+                        output = await self.ollama.chat(
+                            model=model,
+                            user_message=user_prompt,
+                            system_message=node.data.system_prompt,
+                            images=images or None,
+                        )
+                    except Exception as exc:
+                        yield {
+                            "type": "node_failed",
+                            "nodeId": node.id,
+                            "error": str(exc),
+                        }
+                        yield {"type": "failed", "error": str(exc)}
+                        return
+
+                elif node.type == "loop":
+                    loop_input = self._get_upstream_output(
+                        node.id, workflow.edges, node_outputs
+                    )
+                    try:
+                        async for event in self.loop_executor.execute_stream(
+                            loop_node=node,
+                            all_nodes=workflow.nodes,
+                            all_edges=workflow.edges,
+                            loop_input=loop_input,
+                            original_input_text=original_input_text,
+                        ):
+                            yield event
+                            if event["type"] == "loop_completed":
+                                output = event.get("output", "")
+                            elif event["type"] == "node_failed":
+                                yield {
+                                    "type": "failed",
+                                    "error": event.get("error", ""),
+                                }
+                                return
+                    except Exception as exc:
+                        yield {
+                            "type": "node_failed",
+                            "nodeId": node.id,
+                            "error": str(exc),
+                        }
+                        yield {"type": "failed", "error": str(exc)}
+                        return
+
+                elif node.type == "approval":
+                    content = self._get_upstream_output(
+                        node.id, workflow.edges, node_outputs
+                    )
+                    run_registry.begin_approval_wait(run_id, node.id)
                     yield {
-                        "type": "node_failed",
+                        "type": "approval_required",
+                        "runId": run_id,
                         "nodeId": node.id,
-                        "error": str(exc),
+                        "nodeType": node.type,
+                        "label": node.data.label,
+                        "content": content,
+                        "prompt": node.data.approval_prompt or "",
                     }
-                    yield {"type": "failed", "error": str(exc)}
-                    return
+                    try:
+                        decision = await run_registry.wait_for_decision(run_id)
+                    except TimeoutError:
+                        yield {
+                            "type": "node_failed",
+                            "nodeId": node.id,
+                            "error": "Approval timed out",
+                        }
+                        yield {"type": "failed", "error": "Approval timed out"}
+                        return
+                    except asyncio.CancelledError:
+                        yield {
+                            "type": "cancelled",
+                            "nodeId": node.id,
+                            "error": "Run cancelled",
+                        }
+                        return
 
-            elif node.type == "loop":
-                loop_input = self._get_upstream_output(
-                    node.id, workflow.edges, node_outputs
+                    if decision.action == "cancel":
+                        yield {
+                            "type": "cancelled",
+                            "nodeId": node.id,
+                            "error": "Cancelled by user",
+                        }
+                        return
+
+                    if decision.action == "edit":
+                        output = (
+                            decision.edited_content
+                            if decision.edited_content is not None
+                            else content
+                        )
+                    else:
+                        output = content
+
+                elif node.type == "output":
+                    output = self._get_upstream_output(
+                        node.id, workflow.edges, node_outputs
+                    )
+
+                node_outputs[node.id] = output
+                result = NodeExecutionResult(
+                    nodeId=node.id,
+                    nodeType=node.type,
+                    output=output,
                 )
-                try:
-                    async for event in self.loop_executor.execute_stream(
-                        loop_node=node,
-                        all_nodes=workflow.nodes,
-                        all_edges=workflow.edges,
-                        loop_input=loop_input,
-                        original_input_text=original_input_text,
-                    ):
-                        yield event
-                        if event["type"] == "loop_completed":
-                            output = event.get("output", "")
-                        elif event["type"] == "node_failed":
-                            yield {"type": "failed", "error": event.get("error", "")}
-                            return
-                except Exception as exc:
-                    yield {
-                        "type": "node_failed",
-                        "nodeId": node.id,
-                        "error": str(exc),
-                    }
-                    yield {"type": "failed", "error": str(exc)}
-                    return
+                node_results.append(result)
+                final_output = output
 
-            elif node.type == "output":
-                output = self._get_upstream_output(
-                    node.id, workflow.edges, node_outputs
-                )
-
-            node_outputs[node.id] = output
-            result = NodeExecutionResult(
-                nodeId=node.id,
-                nodeType=node.type,
-                output=output,
-            )
-            node_results.append(result)
-            final_output = output
+                yield {
+                    "type": "node_completed",
+                    "nodeId": node.id,
+                    "nodeType": node.type,
+                    "output": output,
+                }
 
             yield {
-                "type": "node_completed",
-                "nodeId": node.id,
-                "nodeType": node.type,
-                "output": output,
+                "type": "completed",
+                "success": True,
+                "nodeResults": [
+                    result.model_dump(by_alias=True) for result in node_results
+                ],
+                "finalOutput": final_output,
             }
-
-        yield {
-            "type": "completed",
-            "success": True,
-            "nodeResults": [
-                result.model_dump(by_alias=True) for result in node_results
-            ],
-            "finalOutput": final_output,
-        }
+        finally:
+            run_registry.discard(run_id)
 
     async def execute(self, request: ExecuteWorkflowRequest) -> ExecuteWorkflowResponse:
+        if any(
+            node.type == "approval" and not node.parent_id
+            for node in request.workflow.nodes
+        ):
+            return ExecuteWorkflowResponse(
+                success=False,
+                node_results=[],
+                final_output="",
+                error="Approval nodes require streaming execution (/execute/stream)",
+            )
+
         node_results: list[NodeExecutionResult] = []
         final_output = ""
 
@@ -243,6 +317,13 @@ class DAGExecutor:
                     node_results=node_results,
                     final_output="",
                     error=event.get("error"),
+                )
+            elif event["type"] == "cancelled":
+                return ExecuteWorkflowResponse(
+                    success=False,
+                    node_results=node_results,
+                    final_output="",
+                    error=event.get("error") or "Cancelled by user",
                 )
             elif event["type"] == "completed":
                 return ExecuteWorkflowResponse(

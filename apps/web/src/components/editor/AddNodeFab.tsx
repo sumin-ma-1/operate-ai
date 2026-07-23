@@ -34,6 +34,12 @@ const paletteItems: {
     description: "Final result",
   },
   {
+    kind: "node",
+    type: "approval",
+    label: NODE_TYPE_LABELS.approval,
+    description: "Review before continue",
+  },
+  {
     kind: "loop-draw",
     label: NODE_TYPE_LABELS.loop,
     description: "Draw on canvas",
@@ -58,6 +64,11 @@ const chipStyles: Record<
     container:
       "border-emerald-400 bg-emerald-500/55 hover:border-emerald-300 hover:bg-emerald-500/70",
     badge: "border-emerald-300 bg-emerald-600 text-emerald-50",
+  },
+  approval: {
+    container:
+      "border-rose-400 bg-rose-500/55 hover:border-rose-300 hover:bg-rose-500/70",
+    badge: "border-rose-300 bg-rose-600 text-rose-50",
   },
   loop: {
     container:

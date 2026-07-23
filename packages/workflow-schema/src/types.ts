@@ -1,4 +1,9 @@
-export type WorkflowNodeType = "input" | "llm" | "output" | "loop";
+export type WorkflowNodeType =
+  | "input"
+  | "llm"
+  | "output"
+  | "loop"
+  | "approval";
 
 export type WorkflowAttachmentKind = "text" | "image" | "document";
 
@@ -34,6 +39,8 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   maxIterations?: number;
   /** Loop container: optional model for built-in checker */
   checkerModel?: string;
+  /** Approval node: optional reviewer instructions shown while waiting */
+  approvalPrompt?: string;
 }
 
 export interface WorkflowNode {
@@ -67,6 +74,15 @@ export interface WorkflowDefinition {
 export interface ExecuteWorkflowRequest {
   workflow: WorkflowDefinition;
   input?: string;
+  runId?: string;
+}
+
+export type ApprovalDecisionAction = "approve" | "edit" | "cancel";
+
+export interface ApprovalDecisionRequest {
+  runId: string;
+  action: ApprovalDecisionAction;
+  editedContent?: string;
 }
 
 export interface NodeExecutionResult {

@@ -11,17 +11,133 @@ import {
 
 import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
 import { OutputActions } from "@/components/editor/OutputActions";
+import { Button } from "@/components/ui/Button";
 import { ScrollFade } from "@/components/ui/ScrollFade";
+import { Textarea } from "@/components/ui/Textarea";
 import { useResizableHeight } from "@/hooks/useResizableHeight";
 import { getNodeTypeLabel } from "@/lib/node-labels";
-import { useWorkflowStore } from "@/stores/workflowStore";
+import { submitApprovalDecision } from "@/lib/workflow-api";
+import { useWorkflowStore, type PendingApproval } from "@/stores/workflowStore";
 
 const RESIZE_HANDLE_HEIGHT = 10;
+
+function ApprovalDecisionPanel({ pending }: { pending: PendingApproval }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(pending.content);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEditing(false);
+    setDraft(pending.content);
+    setError(null);
+  }, [pending.runId, pending.nodeId, pending.content]);
+
+  const submit = async (action: "approve" | "edit" | "cancel") => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitApprovalDecision({
+        runId: pending.runId,
+        action,
+        editedContent: action === "edit" ? draft : undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit decision");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-300">
+        Approval required
+      </h4>
+      {pending.prompt.trim() && (
+        <p className="mt-1 text-sm text-rose-100/90">{pending.prompt}</p>
+      )}
+
+      {editing ? (
+        <Textarea
+          rows={6}
+          className="mt-3 w-full rounded-lg border border-rose-400/30 bg-background/80 px-3 py-2 text-sm scrollbar-none"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+      ) : (
+        <pre className="mt-3 max-h-48 overflow-auto rounded-lg border border-border/60 bg-background/80 p-3 text-sm whitespace-pre-wrap scrollbar-none">
+          {pending.content || "(empty)"}
+        </pre>
+      )}
+
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {editing ? (
+          <Button
+            type="button"
+            disabled={submitting}
+            className="inline-flex items-center gap-1.5 !rounded-xl !border-0 !bg-gradient-to-r !from-rose-500 !via-rose-500 !to-pink-600 !text-white shadow-[0_2px_10px_rgba(244,63,94,0.25)] hover:!opacity-95 hover:!shadow-[0_2px_14px_rgba(244,63,94,0.35)]"
+            onClick={() => void submit("edit")}
+          >
+            <span className="material-icons text-[16px] leading-none">
+              check
+            </span>
+            Continue with edits
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            disabled={submitting}
+            className="inline-flex items-center gap-1.5 !rounded-xl !border-0 !bg-gradient-to-r !from-emerald-500 !via-emerald-600 !to-teal-600 !text-white shadow-[0_2px_10px_rgba(16,185,129,0.25)] hover:!opacity-95 hover:!shadow-[0_2px_14px_rgba(16,185,129,0.35)]"
+            onClick={() => void submit("approve")}
+          >
+            <span className="material-icons text-[16px] leading-none">
+              check_circle
+            </span>
+            Approve
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={submitting}
+          className="inline-flex items-center gap-1.5 !rounded-xl !border !border-slate-500/40 !bg-gradient-to-r !from-slate-700/80 !to-slate-600/50 text-slate-100 hover:!from-slate-600/90 hover:!to-slate-500/60"
+          onClick={() => {
+            if (editing) {
+              setEditing(false);
+              setDraft(pending.content);
+            } else {
+              setEditing(true);
+            }
+          }}
+        >
+          <span className="material-icons text-[16px] leading-none">
+            {editing ? "arrow_back" : "edit"}
+          </span>
+          {editing ? "Back" : "Edit"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={submitting}
+          className="inline-flex items-center gap-1.5 !rounded-xl !border !border-red-400/30 !bg-gradient-to-r !from-red-500/15 !to-rose-500/10 text-red-300 hover:!from-red-500/25 hover:!to-rose-500/20 hover:text-red-200"
+          onClick={() => void submit("cancel")}
+        >
+          <span className="material-icons text-[16px] leading-none">cancel</span>
+          Cancel
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 function PanelBody({
   executionError,
   isRunning,
   executionProgress,
+  pendingApproval,
   lastResult,
   logsOpen,
   setLogsOpen,
@@ -33,6 +149,7 @@ function PanelBody({
   executionProgress: ReturnType<
     typeof useWorkflowStore.getState
   >["executionProgress"];
+  pendingApproval: PendingApproval | null;
   lastResult: ReturnType<typeof useWorkflowStore.getState>["lastResult"];
   logsOpen: boolean;
   setLogsOpen: (value: boolean | ((current: boolean) => boolean)) => void;
@@ -50,6 +167,8 @@ function PanelBody({
       {isRunning && executionProgress.length > 0 && (
         <ExecutionProgress items={executionProgress} />
       )}
+
+      {pendingApproval && <ApprovalDecisionPanel pending={pendingApproval} />}
 
       {lastResult && (
         <>
@@ -96,7 +215,9 @@ function PanelBody({
                         ? "border-violet-400/30"
                         : result.nodeType === "loop"
                           ? "border-amber-400/30"
-                          : "border-emerald-400/30";
+                          : result.nodeType === "approval"
+                            ? "border-rose-400/30"
+                            : "border-emerald-400/30";
 
                   return (
                     <div
@@ -125,6 +246,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
   const lastResult = useWorkflowStore((state) => state.lastResult);
   const executionError = useWorkflowStore((state) => state.executionError);
   const executionProgress = useWorkflowStore((state) => state.executionProgress);
+  const pendingApproval = useWorkflowStore((state) => state.pendingApproval);
   const executionPanelOpen = useWorkflowStore((state) => state.executionPanelOpen);
   const nodes = useWorkflowStore((state) => state.nodes);
   const workflowName = useWorkflowStore((state) => state.workflowName);
@@ -169,7 +291,8 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
   }, [executionPanelOpen, setExecutionPanelOpen]);
 
   const showPanel =
-    executionPanelOpen && Boolean(executionError || isRunning || lastResult);
+    executionPanelOpen &&
+    Boolean(executionError || isRunning || lastResult || pendingApproval);
 
   const isPanelFull = height >= maxHeight - 8;
 
@@ -198,6 +321,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
     setHeight,
     executionError,
     executionProgress,
+    pendingApproval,
     isRunning,
     lastResult,
     logsOpen,
@@ -213,6 +337,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
       executionError={executionError}
       isRunning={isRunning}
       executionProgress={executionProgress}
+      pendingApproval={pendingApproval}
       lastResult={lastResult}
       logsOpen={logsOpen}
       setLogsOpen={setLogsOpen}

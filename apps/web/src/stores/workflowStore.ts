@@ -27,7 +27,12 @@ import {
   type FlowRect,
 } from "@/lib/wrap-nodes-in-loop";
 
-export type ExecutionNodeStatus = "pending" | "running" | "completed" | "failed";
+export type ExecutionNodeStatus =
+  | "pending"
+  | "running"
+  | "awaiting_approval"
+  | "completed"
+  | "failed";
 
 export interface ExecutionProgressNode {
   nodeId: string;
@@ -37,6 +42,14 @@ export interface ExecutionProgressNode {
   message?: string;
   iteration?: number;
   maxIterations?: number;
+}
+
+export interface PendingApproval {
+  runId: string;
+  nodeId: string;
+  label: string;
+  content: string;
+  prompt: string;
 }
 
 type WorkflowNode = Node<WorkflowNodeData, WorkflowNodeType>;
@@ -73,6 +86,7 @@ interface WorkflowState {
   executionError: string | null;
   lastResult: ExecuteWorkflowResponse | null;
   executionProgress: ExecutionProgressNode[];
+  pendingApproval: PendingApproval | null;
   setWorkflowMeta: (id: string, name: string, updatedAt?: string | null) => void;
   setNodes: (nodes: WorkflowNode[]) => void;
   setEdges: (edges: WorkflowEdge[]) => void;
@@ -104,6 +118,7 @@ interface WorkflowState {
     update: Partial<ExecutionProgressNode>
   ) => void;
   clearExecutionProgress: () => void;
+  setPendingApproval: (pending: PendingApproval | null) => void;
   setLastResult: (result: ExecuteWorkflowResponse | null) => void;
   applyExecutionResults: (result: ExecuteWorkflowResponse) => void;
   reset: () => void;
@@ -111,11 +126,21 @@ interface WorkflowState {
 }
 
 function canBeSource(type: WorkflowNodeType | undefined) {
-  return type === "input" || type === "llm" || type === "loop";
+  return (
+    type === "input" ||
+    type === "llm" ||
+    type === "loop" ||
+    type === "approval"
+  );
 }
 
 function canBeTarget(type: WorkflowNodeType | undefined) {
-  return type === "llm" || type === "output" || type === "loop";
+  return (
+    type === "llm" ||
+    type === "output" ||
+    type === "loop" ||
+    type === "approval"
+  );
 }
 
 function isInnerNode(node: WorkflowNode) {
@@ -131,6 +156,13 @@ function isValidConnection(source: WorkflowNode, target: WorkflowNode) {
   if (targetType === "input") return false;
   if (isInnerNode(source) && sourceType === "input") return false;
   if (isInnerNode(target) && targetType === "output") return false;
+  // Approval is outer-only (no HITL inside loops).
+  if (
+    (sourceType === "approval" || targetType === "approval") &&
+    (isInnerNode(source) || isInnerNode(target))
+  ) {
+    return false;
+  }
 
   const sourceParent = source.parentId;
   const targetParent = target.parentId;
@@ -196,6 +228,14 @@ function createDefaultNode(
           maxIterations: 5,
         },
       };
+    case "approval":
+      return {
+        ...base,
+        data: {
+          label: "",
+          approvalPrompt: "Review the content before continuing",
+        },
+      };
   }
 }
 
@@ -214,6 +254,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   executionError: null,
   lastResult: null,
   executionProgress: [],
+  pendingApproval: null,
 
   setWorkflowMeta: (id, name, updatedAt) =>
     set((state) => ({
@@ -509,7 +550,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   loadWorkflow: (workflow) => {
     const maxCounter = workflow.nodes.reduce((max, node) => {
-      const match = node.id.match(/^(input|llm|output|loop)-(\d+)$/);
+      const match = node.id.match(/^(input|llm|output|loop|approval)-(\d+)$/);
       if (!match) return max;
       return Math.max(max, Number(match[2]));
     }, 0);
@@ -538,6 +579,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       executionError: null,
       lastResult: null,
       executionProgress: [],
+      pendingApproval: null,
     });
   },
 
@@ -590,7 +632,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       ),
     })),
 
-  clearExecutionProgress: () => set({ executionProgress: [] }),
+  clearExecutionProgress: () =>
+    set({ executionProgress: [], pendingApproval: null }),
+
+  setPendingApproval: (pending) => set({ pendingApproval: pending }),
 
   setLastResult: (result) => set({ lastResult: result }),
 
@@ -623,6 +668,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       executionError: null,
       lastResult: null,
       executionProgress: [],
+      pendingApproval: null,
     }),
 
   initDefaultWorkflow: (id, name) => {
@@ -663,6 +709,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       executionError: null,
       lastResult: null,
       executionProgress: [],
+      pendingApproval: null,
     });
   },
 }));

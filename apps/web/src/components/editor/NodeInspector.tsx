@@ -51,6 +51,11 @@ function accentForType(type: string | undefined) {
         panel: "border-amber-400/35 shadow-[0_0_32px_rgba(251,191,36,0.2)]",
         port: "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.85)]",
       };
+    case "approval":
+      return {
+        panel: "border-rose-400/35 shadow-[0_0_32px_rgba(251,113,133,0.2)]",
+        port: "bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.85)]",
+      };
     default:
       return {
         panel: "border-white/10 shadow-[0_0_24px_rgba(148,163,184,0.12)]",
@@ -477,6 +482,23 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                 />
               </div>
             </>
+          )}
+
+          {type === "approval" && (
+            <div>
+              <label className="mb-1.5 block text-xs text-white/70">
+                Instructions
+              </label>
+              <Textarea
+                rows={3}
+                className={`${fieldClass} scrollbar-none`}
+                placeholder="Optional guidance for the reviewer"
+                value={data.approvalPrompt || ""}
+                onChange={(event) =>
+                  updateNodeData(id, { approvalPrompt: event.target.value })
+                }
+              />
+            </div>
           )}
 
           {type === "output" && (

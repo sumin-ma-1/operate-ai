@@ -1,5 +1,6 @@
 "use client";
 
+import { ApprovalNode } from "./ApprovalNode";
 import { InputNode } from "./InputNode";
 import { LlmNode } from "./LlmNode";
 import { LoopNode } from "./LoopNode";
@@ -10,4 +11,5 @@ export const nodeTypes = {
   llm: LlmNode,
   output: OutputNode,
   loop: LoopNode,
+  approval: ApprovalNode,
 };

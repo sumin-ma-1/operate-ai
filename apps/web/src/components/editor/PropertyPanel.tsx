@@ -245,6 +245,20 @@ export function PropertyPanel() {
           </>
         )}
 
+        {type === "approval" && (
+          <div>
+            <label className="mb-1 block text-xs text-muted">Instructions</label>
+            <Textarea
+              rows={4}
+              value={data.approvalPrompt || ""}
+              placeholder="Optional guidance for the reviewer"
+              onChange={(event) =>
+                updateNodeData(id, { approvalPrompt: event.target.value })
+              }
+            />
+          </div>
+        )}
+
         {type === "output" && (
           <div>
             <div className="mb-1 flex items-center justify-between gap-2">

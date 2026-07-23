@@ -1,4 +1,5 @@
 import type {
+  ApprovalDecisionRequest,
   ExecuteWorkflowRequest,
   ExecuteWorkflowResponse,
   OllamaModel,
@@ -82,9 +83,19 @@ export async function executeWorkflow(
   });
 }
 
+export async function submitApprovalDecision(
+  payload: ApprovalDecisionRequest
+): Promise<void> {
+  await request("/execute/decision", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export type ExecutionStreamEvent =
   | {
       type: "started";
+      runId?: string;
       nodes: Array<{
         nodeId: string;
         nodeType: WorkflowNodeType;
@@ -114,6 +125,15 @@ export type ExecutionStreamEvent =
       error: string;
     }
   | {
+      type: "approval_required";
+      runId: string;
+      nodeId: string;
+      nodeType: WorkflowNodeType;
+      label: string;
+      content: string;
+      prompt: string;
+    }
+  | {
       type: "loop_started";
       nodeId: string;
       label: string;
@@ -140,6 +160,11 @@ export type ExecutionStreamEvent =
     } & ExecuteWorkflowResponse)
   | {
       type: "failed";
+      error: string;
+    }
+  | {
+      type: "cancelled";
+      nodeId?: string;
       error: string;
     };
 
@@ -219,6 +244,10 @@ export async function executeWorkflowStream(
 
         if (event.type === "failed") {
           throw new Error(event.error);
+        }
+
+        if (event.type === "cancelled") {
+          throw new Error(event.error || "Cancelled by user");
         }
       }
     }

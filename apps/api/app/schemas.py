@@ -36,13 +36,14 @@ class WorkflowNodeData(BaseModel):
     goal_prompt: Optional[str] = Field(default=None, alias="goalPrompt")
     max_iterations: Optional[int] = Field(default=5, alias="maxIterations")
     checker_model: Optional[str] = Field(default=None, alias="checkerModel")
+    approval_prompt: Optional[str] = Field(default=None, alias="approvalPrompt")
 
     model_config = {"populate_by_name": True}
 
 
 class WorkflowNode(BaseModel):
     id: str
-    type: Literal["input", "llm", "output", "loop"]
+    type: Literal["input", "llm", "output", "loop", "approval"]
     position: WorkflowNodePosition
     data: WorkflowNodeData
     parent_id: Optional[str] = Field(default=None, alias="parentId")
@@ -77,6 +78,17 @@ class WorkflowDefinition(BaseModel):
 class ExecuteWorkflowRequest(BaseModel):
     workflow: WorkflowDefinition
     input: Optional[str] = None
+    run_id: Optional[str] = Field(default=None, alias="runId")
+
+    model_config = {"populate_by_name": True}
+
+
+class ApprovalDecisionRequest(BaseModel):
+    run_id: str = Field(alias="runId")
+    action: Literal["approve", "edit", "cancel"]
+    edited_content: Optional[str] = Field(default=None, alias="editedContent")
+
+    model_config = {"populate_by_name": True}
 
 
 class NodeExecutionResult(BaseModel):

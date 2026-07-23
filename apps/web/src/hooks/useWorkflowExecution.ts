@@ -33,6 +33,7 @@ export function useWorkflowExecution() {
     (state) => state.setExecutionPanelOpen
   );
   const setExecutionError = useWorkflowStore((state) => state.setExecutionError);
+  const setPendingApproval = useWorkflowStore((state) => state.setPendingApproval);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -61,6 +62,7 @@ export function useWorkflowExecution() {
 
       setExecutionError(null);
       clearExecutionProgress();
+      setPendingApproval(null);
       setRunning(true);
       setExecutionPanelOpen(true);
 
@@ -134,14 +136,34 @@ export function useWorkflowExecution() {
 
               const current = useWorkflowStore.getState().executionProgress;
               setExecutionProgress(
-                current.map((item) =>
-                  item.nodeId === event.nodeId
-                    ? { ...item, status: "running", message: event.message }
-                    : item.status === "running" && item.nodeType !== "loop"
-                      ? { ...item, status: "pending", message: undefined }
-                      : item
-                )
+                current.map((item) => {
+                  if (item.nodeId === event.nodeId) {
+                    return { ...item, status: "running", message: event.message };
+                  }
+                  if (
+                    item.status === "running" &&
+                    item.nodeType !== "loop"
+                  ) {
+                    return { ...item, status: "pending", message: undefined };
+                  }
+                  return item;
+                })
               );
+              return;
+            }
+
+            if (event.type === "approval_required") {
+              setPendingApproval({
+                runId: event.runId,
+                nodeId: event.nodeId,
+                label: event.label,
+                content: event.content,
+                prompt: event.prompt,
+              });
+              updateExecutionProgress(event.nodeId, {
+                status: "awaiting_approval",
+                message: event.prompt || "Waiting for approval",
+              });
               return;
             }
 
@@ -155,6 +177,12 @@ export function useWorkflowExecution() {
                   iteration: event.iteration,
                 });
                 return;
+              }
+
+              if (
+                useWorkflowStore.getState().pendingApproval?.nodeId === event.nodeId
+              ) {
+                setPendingApproval(null);
               }
 
               updateExecutionProgress(event.nodeId, {
@@ -197,6 +225,7 @@ export function useWorkflowExecution() {
             }
 
             if (event.type === "node_failed") {
+              setPendingApproval(null);
               updateExecutionProgress(event.nodeId, {
                 status: "failed",
                 message: event.error,
@@ -214,6 +243,7 @@ export function useWorkflowExecution() {
         }
       } catch (err) {
         clearExecutionProgress();
+        setPendingApproval(null);
         if (isAbortError(err)) {
           return;
         }
@@ -223,6 +253,7 @@ export function useWorkflowExecution() {
           abortRef.current = null;
         }
         setRunning(false);
+        setPendingApproval(null);
       }
     },
     [
@@ -233,6 +264,7 @@ export function useWorkflowExecution() {
       setExecutionError,
       setExecutionPanelOpen,
       setExecutionProgress,
+      setPendingApproval,
       setRunning,
       stop,
       toWorkflowDefinition,

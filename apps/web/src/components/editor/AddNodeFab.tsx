@@ -149,7 +149,7 @@ export function AddNodeFab() {
         <button
           type="button"
           onClick={() => setOpen((current) => !current)}
-          className={`inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-400/50 bg-sky-500/90 text-white shadow-[0_8px_24px_rgba(14,165,233,0.35)] transition duration-300 hover:bg-sky-400 hover:shadow-[0_10px_28px_rgba(14,165,233,0.45)] ${
+          className={`inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-400/40 bg-gradient-to-br from-sky-600 via-sky-700 to-indigo-800 text-white shadow-[0_8px_24px_rgba(14,165,233,0.28)] transition duration-300 hover:from-sky-500 hover:via-sky-600 hover:to-indigo-700 hover:shadow-[0_10px_28px_rgba(14,165,233,0.38)] ${
             open || loopDrawMode ? "rotate-45" : "animate-float"
           }`}
           title={open ? "Close nodes" : "Add node"}

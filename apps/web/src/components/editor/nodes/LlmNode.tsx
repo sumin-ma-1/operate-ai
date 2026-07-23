@@ -10,7 +10,17 @@ import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
 type LlmNodeType = Node<WorkflowNodeData, "llm">;
 
+const TOOL_META: Record<string, { label: string; icon: string }> = {
+  web_search: { label: "Web search", icon: "travel_explore" },
+};
+
+const chipClass =
+  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide";
+
 export function LlmNode({ data }: NodeProps<LlmNodeType>) {
+  const model = data.model || "gemma4:e4b";
+  const tools = data.enabledTools || [];
+
   return (
     <div className="box-border w-full max-w-full overflow-hidden p-3 text-left">
       <Handle type="target" position={Position.Left} />
@@ -18,13 +28,34 @@ export function LlmNode({ data }: NodeProps<LlmNodeType>) {
         LLM
       </div>
       <NodeCardLabel label={data.label} type="llm" />
-      <div className="mt-2 space-y-1 overflow-hidden text-xs text-muted">
-        <p className="truncate">Model: {data.model || "gemma4:e4b"}</p>
-        {(data.enabledTools || []).length > 0 && (
-          <p className="truncate text-sky-300/80">
-            Tools: {(data.enabledTools || []).join(", ")}
-          </p>
-        )}
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <span
+          className={`${chipClass} border-violet-400/40 bg-gradient-to-r from-violet-500/30 via-fuchsia-500/20 to-indigo-500/25 text-violet-100`}
+          title={`Model: ${model}`}
+        >
+          <span className="material-icons text-[12px] leading-none opacity-80">
+            auto_awesome
+          </span>
+          <span className="truncate">{model}</span>
+        </span>
+        {tools.map((tool) => {
+          const meta = TOOL_META[tool] ?? {
+            label: tool.replaceAll("_", " "),
+            icon: "build",
+          };
+          return (
+            <span
+              key={tool}
+              className={`${chipClass} border-sky-400/40 bg-sky-500/20 text-sky-100`}
+              title={`Tool: ${meta.label}`}
+            >
+              <span className="material-icons text-[12px] leading-none">
+                {meta.icon}
+              </span>
+              <span className="truncate">{meta.label}</span>
+            </span>
+          );
+        })}
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

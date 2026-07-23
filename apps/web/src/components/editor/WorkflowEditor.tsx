@@ -244,7 +244,7 @@ function WorkflowCanvas() {
       {connectSourceId && (
         <div className="pointer-events-none absolute top-4 left-1/2 z-20 -translate-x-1/2">
           <div className="rounded-full border border-sky-400/40 bg-slate-900/90 px-4 py-1.5 text-sm text-sky-100 shadow-lg backdrop-blur-sm">
-            Click a target node to connect
+            Click a target node to connect or double click to edit
           </div>
         </div>
       )}

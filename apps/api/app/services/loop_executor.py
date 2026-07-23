@@ -8,6 +8,7 @@ from app.services.input_content import (
     get_upstream_source,
 )
 from app.services.ollama import OllamaService
+from app.services.tool_loop import run_tool_loop
 
 
 CHECKER_SYSTEM_PROMPT = (
@@ -194,12 +195,37 @@ class LoopExecutor:
                         _active_edges(all_edges),
                     )
 
-                    output = await self.ollama.chat(
-                        model=inner_node.data.model or default_model,
-                        user_message=user_prompt,
-                        system_message=inner_node.data.system_prompt,
-                        images=images or None,
-                    )
+                    enabled_tools = inner_node.data.enabled_tools or []
+                    if enabled_tools:
+                        async for event in run_tool_loop(
+                            ollama=self.ollama,
+                            model=inner_node.data.model or default_model,
+                            system_message=inner_node.data.system_prompt,
+                            user_message=user_prompt,
+                            images=images or None,
+                            enabled_tools=enabled_tools,
+                            max_tool_rounds=inner_node.data.max_tool_rounds,
+                            node_id=inner_node.id,
+                        ):
+                            if event["type"] == "tool_loop_completed":
+                                output = event.get("output", "")
+                            elif event["type"] in {
+                                "tool_started",
+                                "tool_completed",
+                                "tool_round",
+                            }:
+                                yield {
+                                    **event,
+                                    "loopId": loop_node.id,
+                                    "iteration": iteration,
+                                }
+                    else:
+                        output = await self.ollama.chat(
+                            model=inner_node.data.model or default_model,
+                            user_message=user_prompt,
+                            system_message=inner_node.data.system_prompt,
+                            images=images or None,
+                        )
                 else:
                     raise ValueError(
                         f"Unsupported node type inside loop: {inner_node.type}"

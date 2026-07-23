@@ -374,7 +374,7 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
             className={`p-4 ${isPanelFull ? "min-h-0 flex-1 overflow-hidden" : ""}`}
           >
             {isPanelFull ? (
-              <ScrollFade className="space-y-4">{panelBody}</ScrollFade>
+              <ScrollFade className="h-full space-y-4">{panelBody}</ScrollFade>
             ) : (
               panelBody
             )}

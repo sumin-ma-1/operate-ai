@@ -41,6 +41,10 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   checkerModel?: string;
   /** Approval node: optional reviewer instructions shown while waiting */
   approvalPrompt?: string;
+  /** LLM node: enabled tool names (e.g. web_search) */
+  enabledTools?: string[];
+  /** LLM node: max tool-call rounds per run (default 5) */
+  maxToolRounds?: number;
 }
 
 export interface WorkflowNode {

@@ -19,6 +19,7 @@ from app.services.input_content import (
 from app.services.loop_executor import LoopExecutor
 from app.services.ollama import OllamaService
 from app.services.run_registry import run_registry
+from app.services.tool_loop import run_tool_loop
 
 
 class DAGExecutor:
@@ -158,14 +159,35 @@ class DAGExecutor:
                     images = collect_upstream_images(
                         node.id, workflow.nodes, workflow.edges, active_edges
                     )
+                    enabled_tools = node.data.enabled_tools or []
 
                     try:
-                        output = await self.ollama.chat(
-                            model=model,
-                            user_message=user_prompt,
-                            system_message=node.data.system_prompt,
-                            images=images or None,
-                        )
+                        if enabled_tools:
+                            async for event in run_tool_loop(
+                                ollama=self.ollama,
+                                model=model,
+                                system_message=node.data.system_prompt,
+                                user_message=user_prompt,
+                                images=images or None,
+                                enabled_tools=enabled_tools,
+                                max_tool_rounds=node.data.max_tool_rounds,
+                                node_id=node.id,
+                            ):
+                                if event["type"] == "tool_loop_completed":
+                                    output = event.get("output", "")
+                                elif event["type"] in {
+                                    "tool_started",
+                                    "tool_completed",
+                                    "tool_round",
+                                }:
+                                    yield event
+                        else:
+                            output = await self.ollama.chat(
+                                model=model,
+                                user_message=user_prompt,
+                                system_message=node.data.system_prompt,
+                                images=images or None,
+                            )
                     except Exception as exc:
                         yield {
                             "type": "node_failed",

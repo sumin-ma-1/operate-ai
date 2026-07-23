@@ -15,6 +15,7 @@ import { InputAttachments } from "@/components/editor/InputAttachments";
 import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { getNodeDisplayLabel, getNodeTypeLabel } from "@/lib/node-labels";
@@ -375,7 +376,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
           </div>
         </div>
 
-        <div className="mt-4 max-h-[min(60vh,420px)] space-y-4 overflow-y-auto pr-0.5 scrollbar-none">
+        <ScrollFade className="mt-4 max-h-[min(60vh,420px)] space-y-4 pr-0.5">
           <div>
             <label className="mb-1.5 block text-xs text-white/70">Label</label>
             <Input
@@ -444,6 +445,54 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                   }
                 />
               </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-white/70">Tools</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = data.enabledTools || [];
+                    const next = current.includes("web_search")
+                      ? current.filter((tool) => tool !== "web_search")
+                      : [...current, "web_search"];
+                    updateNodeData(id, { enabledTools: next });
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                    (data.enabledTools || []).includes("web_search")
+                      ? "border-sky-400/60 bg-sky-500/30 text-sky-100"
+                      : "border-white/15 bg-white/5 text-white/45 hover:border-white/25 hover:text-white/70"
+                  }`}
+                >
+                  <span className="material-icons text-[14px] leading-none">
+                    travel_explore
+                  </span>
+                  Web search
+                </button>
+                <p className="mt-1.5 text-[11px] text-white/35">
+                  Requires an Ollama model that supports tool calling
+                </p>
+              </div>
+              {(data.enabledTools || []).length > 0 && (
+                <div>
+                  <label className="mb-1.5 block text-xs text-white/70">
+                    Max tool rounds
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    className={fieldClass}
+                    value={data.maxToolRounds ?? 5}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      updateNodeData(id, {
+                        maxToolRounds: Number.isNaN(parsed)
+                          ? 5
+                          : Math.min(10, Math.max(1, parsed)),
+                      });
+                    }}
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -518,7 +567,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
               />
             </div>
           )}
-        </div>
+        </ScrollFade>
       </div>
     </NodeToolbar>
   );

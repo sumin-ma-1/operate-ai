@@ -167,6 +167,20 @@ export function useWorkflowExecution() {
               return;
             }
 
+            if (
+              event.type === "tool_started" ||
+              event.type === "tool_completed" ||
+              event.type === "tool_round"
+            ) {
+              const targetId = event.loopId || event.nodeId;
+              updateExecutionProgress(targetId, {
+                status: "running",
+                message: event.message,
+                ...(event.iteration != null ? { iteration: event.iteration } : {}),
+              });
+              return;
+            }
+
             if (event.type === "node_completed") {
               if (event.loopId) {
                 updateExecutionProgress(event.loopId, {

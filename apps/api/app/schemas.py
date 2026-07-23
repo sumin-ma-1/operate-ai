@@ -37,6 +37,8 @@ class WorkflowNodeData(BaseModel):
     max_iterations: Optional[int] = Field(default=5, alias="maxIterations")
     checker_model: Optional[str] = Field(default=None, alias="checkerModel")
     approval_prompt: Optional[str] = Field(default=None, alias="approvalPrompt")
+    enabled_tools: Optional[list[str]] = Field(default=None, alias="enabledTools")
+    max_tool_rounds: Optional[int] = Field(default=5, alias="maxToolRounds")
 
     model_config = {"populate_by_name": True}
 

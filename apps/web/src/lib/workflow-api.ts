@@ -134,6 +134,32 @@ export type ExecutionStreamEvent =
       prompt: string;
     }
   | {
+      type: "tool_started";
+      nodeId: string;
+      toolName: string;
+      args?: Record<string, unknown>;
+      message: string;
+      loopId?: string;
+      iteration?: number;
+    }
+  | {
+      type: "tool_completed";
+      nodeId: string;
+      toolName: string;
+      summary?: string;
+      message: string;
+      loopId?: string;
+      iteration?: number;
+    }
+  | {
+      type: "tool_round";
+      nodeId: string;
+      message: string;
+      round: number;
+      loopId?: string;
+      iteration?: number;
+    }
+  | {
       type: "loop_started";
       nodeId: string;
       label: string;

@@ -20,6 +20,11 @@ export function LlmNode({ data }: NodeProps<LlmNodeType>) {
       <NodeCardLabel label={data.label} type="llm" />
       <div className="mt-2 space-y-1 overflow-hidden text-xs text-muted">
         <p className="truncate">Model: {data.model || "gemma4:e4b"}</p>
+        {(data.enabledTools || []).length > 0 && (
+          <p className="truncate text-sky-300/80">
+            Tools: {(data.enabledTools || []).join(", ")}
+          </p>
+        )}
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

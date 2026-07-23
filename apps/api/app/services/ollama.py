@@ -1,6 +1,57 @@
+from dataclasses import dataclass, field
+from typing import Any
+
 import httpx
 
 from app.config import OLLAMA_BASE_URL
+
+
+@dataclass
+class ToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ChatResult:
+    content: str
+    tool_calls: list[ToolCall] = field(default_factory=list)
+    raw_message: dict[str, Any] = field(default_factory=dict)
+
+
+def _parse_tool_calls(message: dict[str, Any]) -> list[ToolCall]:
+    raw_calls = message.get("tool_calls") or []
+    parsed: list[ToolCall] = []
+
+    for index, call in enumerate(raw_calls):
+        if not isinstance(call, dict):
+            continue
+        function = call.get("function") or {}
+        name = function.get("name") or call.get("name") or ""
+        if not name:
+            continue
+
+        arguments = function.get("arguments", call.get("arguments", {}))
+        if isinstance(arguments, str):
+            import json
+
+            try:
+                arguments = json.loads(arguments)
+            except json.JSONDecodeError:
+                arguments = {"raw": arguments}
+        if not isinstance(arguments, dict):
+            arguments = {"value": arguments}
+
+        parsed.append(
+            ToolCall(
+                id=str(call.get("id") or f"call_{index}"),
+                name=name,
+                arguments=arguments,
+            )
+        )
+
+    return parsed
 
 
 class OllamaService:
@@ -30,10 +81,27 @@ class OllamaService:
             user_payload["images"] = images
         messages.append(user_payload)
 
+        result = await self.chat_messages(model=model, messages=messages)
+        return result.content
+
+    async def chat_messages(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatResult:
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+        }
+        if tools:
+            payload["tools"] = tools
+
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{self.base_url}/api/chat",
-                json={"model": model, "messages": messages, "stream": False},
+                json=payload,
             )
             if response.status_code == 404:
                 raise ValueError(
@@ -44,4 +112,12 @@ class OllamaService:
                 detail = response.text.strip() or response.reason_phrase
                 raise ValueError(f"Ollama error ({response.status_code}): {detail}")
             data = response.json()
-            return data.get("message", {}).get("content", "")
+
+        message = data.get("message") or {}
+        content = message.get("content") or ""
+        tool_calls = _parse_tool_calls(message)
+        return ChatResult(
+            content=content,
+            tool_calls=tool_calls,
+            raw_message=message,
+        )

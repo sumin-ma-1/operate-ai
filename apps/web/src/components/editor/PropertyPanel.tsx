@@ -191,6 +191,53 @@ export function PropertyPanel() {
                 }
               />
             </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Tools</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = data.enabledTools || [];
+                  const next = current.includes("web_search")
+                    ? current.filter((tool) => tool !== "web_search")
+                    : [...current, "web_search"];
+                  updateNodeData(id, { enabledTools: next });
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                  (data.enabledTools || []).includes("web_search")
+                    ? "border-sky-400/60 bg-sky-500/30 text-sky-100"
+                    : "border-border bg-background text-muted hover:text-foreground"
+                }`}
+              >
+                <span className="material-icons text-[14px] leading-none">
+                  travel_explore
+                </span>
+                Web search
+              </button>
+              <p className="mt-1 text-xs text-muted">
+                Requires an Ollama model that supports tool calling
+              </p>
+            </div>
+            {(data.enabledTools || []).length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs text-muted">
+                  Max tool rounds
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={data.maxToolRounds ?? 5}
+                  onChange={(event) => {
+                    const parsed = Number(event.target.value);
+                    updateNodeData(id, {
+                      maxToolRounds: Number.isNaN(parsed)
+                        ? 5
+                        : Math.min(10, Math.max(1, parsed)),
+                    });
+                  }}
+                />
+              </div>
+            )}
           </>
         )}
 

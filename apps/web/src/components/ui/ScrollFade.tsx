@@ -53,22 +53,20 @@ export function ScrollFade({ children, className = "" }: ScrollFadeProps) {
   }, [update, children]);
 
   return (
-    <div className="relative min-h-0 flex-1 overflow-hidden">
-      <div
-        ref={ref}
-        onScroll={update}
-        className={`scrollbar-none h-full max-h-full overflow-y-auto transition-[mask-image,-webkit-mask-image] duration-200 ${className}`}
-        style={
-          fadeBottom
-            ? {
-                WebkitMaskImage: bottomFadeMask,
-                maskImage: bottomFadeMask,
-              }
-            : undefined
-        }
-      >
-        {children}
-      </div>
+    <div
+      ref={ref}
+      onScroll={update}
+      className={`scrollbar-none overflow-y-auto transition-[mask-image,-webkit-mask-image] duration-200 ${className}`}
+      style={
+        fadeBottom
+          ? {
+              WebkitMaskImage: bottomFadeMask,
+              maskImage: bottomFadeMask,
+            }
+          : undefined
+      }
+    >
+      {children}
     </div>
   );
 }

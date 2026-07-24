@@ -10,7 +10,7 @@
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/94925e22-a41f-42c2-8e22-0c66c93698ab"
+    src="https://github.com/user-attachments/assets/06ab7c7e-0c9f-4e11-a277-0098e5b0cd89"
     alt="Operate AI preview"
     width="900"
   />

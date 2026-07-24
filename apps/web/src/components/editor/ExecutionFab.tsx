@@ -10,12 +10,13 @@ import {
 } from "react";
 
 import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
+import { NodeLogsList } from "@/components/editor/NodeLogsList";
 import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Textarea } from "@/components/ui/Textarea";
 import { useResizableHeight } from "@/hooks/useResizableHeight";
-import { getNodeTypeLabel, getFinalOutputHeading } from "@/lib/node-labels";
+import { getFinalOutputHeading } from "@/lib/node-labels";
 import { submitApprovalDecision } from "@/lib/workflow-api";
 import { useWorkflowStore, type PendingApproval } from "@/stores/workflowStore";
 
@@ -205,36 +206,8 @@ function PanelBody({
               </h4>
             </button>
             {logsOpen && (
-              <div className="mt-2 space-y-2">
-                {lastResult.nodeResults.map((result) => {
-                  const label =
-                    nodes.find((node) => node.id === result.nodeId)?.data.label ||
-                    result.nodeType;
-                  const typeLabel = getNodeTypeLabel(result.nodeType);
-                  const typeAccent =
-                    result.nodeType === "input"
-                      ? "border-sky-400/30"
-                      : result.nodeType === "llm"
-                        ? "border-violet-400/30"
-                        : result.nodeType === "loop"
-                          ? "border-amber-400/30"
-                          : result.nodeType === "approval"
-                            ? "border-rose-400/30"
-                            : "border-emerald-400/30";
-
-                  return (
-                    <div
-                      key={result.nodeId}
-                      className={`rounded-lg border bg-background/60 p-2.5 text-sm ${typeAccent}`}
-                    >
-                      <span className="font-medium">{label}</span>
-                      <span className="text-muted"> ({typeLabel})</span>
-                      <pre className="mt-1 overflow-auto whitespace-pre-wrap text-xs text-muted scrollbar-none">
-                        {result.output || "(empty)"}
-                      </pre>
-                    </div>
-                  );
-                })}
+              <div className="mt-2">
+                <NodeLogsList results={lastResult.nodeResults} nodes={nodes} />
               </div>
             )}
           </section>
@@ -297,8 +270,6 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
     executionPanelOpen &&
     Boolean(executionError || isRunning || lastResult || pendingApproval);
 
-  const isPanelFull = height >= maxHeight - 8;
-
   useLayoutEffect(() => {
     if (!showPanel || userResizedRef.current) return;
 
@@ -328,7 +299,6 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
     isRunning,
     lastResult,
     logsOpen,
-    isPanelFull,
   ]);
 
   const panelOffsetStyle = {
@@ -372,15 +342,12 @@ export function ExecutionFab({ children }: { children: ReactNode }) {
             <span className="h-0.5 w-10 rounded-full bg-border/80 transition group-hover:bg-sky-400/50 group-active:bg-sky-400/70" />
           </div>
 
-          <div
-            ref={contentRef}
-            className={`p-4 ${isPanelFull ? "min-h-0 flex-1 overflow-hidden" : ""}`}
-          >
-            {isPanelFull ? (
-              <ScrollFade className="h-full space-y-4">{panelBody}</ScrollFade>
-            ) : (
-              panelBody
-            )}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ScrollFade className="h-full">
+              <div ref={contentRef} className="p-4">
+                {panelBody}
+              </div>
+            </ScrollFade>
           </div>
         </aside>
       )}

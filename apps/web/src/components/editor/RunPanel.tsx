@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
+import { NodeLogsList } from "@/components/editor/NodeLogsList";
 import { ResizeHandle } from "@/components/editor/ResizeHandle";
 import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
@@ -211,26 +212,8 @@ export function RunPanel() {
               <h4 className="shrink-0 text-xs font-semibold uppercase text-muted">
                 Node Logs
               </h4>
-              <div className="scrollbar-none mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                {lastResult.nodeResults.map((result) => {
-                  const label =
-                    nodes.find((node) => node.id === result.nodeId)?.data.label ||
-                    result.nodeType;
-                  const typeLabel = result.nodeType.toUpperCase();
-
-                  return (
-                    <div
-                      key={result.nodeId}
-                      className="rounded-md border border-border bg-background p-2 text-xs"
-                    >
-                      <span className="font-medium">{label}</span>
-                      <span className="text-muted"> ({typeLabel})</span>
-                      <pre className="scrollbar-none mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-muted">
-                        {result.output || "(empty)"}
-                      </pre>
-                    </div>
-                  );
-                })}
+              <div className="scrollbar-none mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
+                <NodeLogsList results={lastResult.nodeResults} nodes={nodes} />
               </div>
             </div>
           </>

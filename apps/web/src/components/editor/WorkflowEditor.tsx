@@ -243,7 +243,7 @@ function WorkflowCanvas() {
               case "output":
                 return "#34d399";
               case "loop":
-                return "#fbbf24";
+                return "rgba(251, 191, 36, 0.28)";
               case "approval":
                 return "#fb7185";
               default:

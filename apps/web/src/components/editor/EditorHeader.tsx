@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import { Toast } from "@/components/ui/Toast";
 import { saveWorkflow } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -86,13 +87,11 @@ export function EditorHeader() {
             disabled={isSaving}
             className="inline-flex items-center gap-1.5 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-4 py-1.0 shadow-[0_2px_12px_rgba(99,102,241,0.22)] hover:shadow-[0_2px_14px_rgba(99,102,241,0.32)] hover:!opacity-100"
           >
-            <span
-              className={`material-icons text-[18px] leading-none ${
-                isSaving ? "animate-spin" : ""
-              }`}
-            >
-              {isSaving ? "autorenew" : "star"}
-            </span>
+            {isSaving ? (
+              <SpinnerIcon size={18} />
+            ) : (
+              <span className="material-icons text-[18px] leading-none">star</span>
+            )}
             {isSaving ? "Saving" : "Save"}
           </Button>
         </div>

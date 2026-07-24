@@ -258,7 +258,7 @@ class DAGExecutor:
                             original_input_text=original_input_text,
                         ):
                             yield event
-            if event["type"] == "loop_completed":
+                            if event["type"] == "loop_completed":
                                 reason = event.get("reason", "")
                                 iterations = event.get("iterations", 0)
                                 max_iterations = event.get("maxIterations", 0)

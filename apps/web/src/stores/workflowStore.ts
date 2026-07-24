@@ -21,8 +21,14 @@ import type {
 
 import { unwrapLoopGraph } from "@/lib/unwrap-loop";
 import {
+  findLoopContainingPoint,
+  syncLoopMembershipOnDragStop,
+} from "@/lib/loop-membership";
+import {
   createLoopFromDraw,
+  DEFAULT_NODE_HEIGHT,
   getLlmsInRect,
+  INNER_LLM_WIDTH,
   wrapNodesInLoopGraph,
   type FlowRect,
 } from "@/lib/wrap-nodes-in-loop";
@@ -102,6 +108,7 @@ interface WorkflowState {
   startLoopDrawMode: () => void;
   cancelLoopDrawMode: () => void;
   completeLoopDraw: (bounds: FlowRect) => void;
+  reparentAfterDrag: (nodeId: string) => void;
   updateNodeData: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
   removeNode: (nodeId: string) => void;
   unwrapLoop: (loopId: string) => void;
@@ -295,8 +302,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           .map((change) => change.id)
       );
 
+      const nextNodes = applyNodeChanges(expandedChanges, state.nodes).map(
+        (node) => {
+          if (node.extent == null) return node;
+          const { extent: _extent, ...rest } = node;
+          return rest;
+        }
+      );
+
       return {
-        nodes: applyNodeChanges(expandedChanges, state.nodes),
+        nodes: nextNodes,
         edges:
           removedIds.size > 0
             ? state.edges.filter(
@@ -419,9 +434,52 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   addNode: (type, position) =>
-    set((state) => ({
-      nodes: [...state.nodes, createDefaultNode(type, position)],
-    })),
+    set((state) => {
+      if (type !== "llm" || !position) {
+        return {
+          nodes: [...state.nodes, createDefaultNode(type, position)],
+        };
+      }
+
+      const probe = {
+        x: position.x + INNER_LLM_WIDTH / 2,
+        y: position.y + DEFAULT_NODE_HEIGHT / 2,
+      };
+      const loop = findLoopContainingPoint(state.nodes, probe);
+      if (!loop) {
+        return {
+          nodes: [...state.nodes, createDefaultNode(type, position)],
+        };
+      }
+
+      const created = createDefaultNode(type, {
+        x: position.x - loop.position.x,
+        y: position.y - loop.position.y,
+      });
+      const nested: WorkflowNode = {
+        ...created,
+        parentId: loop.id,
+        className: "loop-inner-node",
+        style: {
+          ...created.style,
+          width: INNER_LLM_WIDTH,
+        },
+      };
+
+      const withoutDup = state.nodes.filter((node) => node.id !== nested.id);
+      const loopIndex = withoutDup.findIndex((node) => node.id === loop.id);
+      if (loopIndex === -1) {
+        return { nodes: [...withoutDup, nested] };
+      }
+
+      const nodes = [
+        ...withoutDup.slice(0, loopIndex + 1),
+        nested,
+        ...withoutDup.slice(loopIndex + 1),
+      ];
+
+      return { nodes };
+    }),
 
   startLoopDrawMode: () =>
     set({
@@ -472,6 +530,21 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         selectedEdgeId: null,
         connectSourceId: null,
         loopDrawMode: false,
+      };
+    }),
+
+  reparentAfterDrag: (nodeId) =>
+    set((state) => {
+      const result = syncLoopMembershipOnDragStop({
+        nodes: state.nodes,
+        edges: state.edges,
+        nodeId,
+        styleEdge,
+      });
+      if (!result) return {};
+      return {
+        nodes: result.nodes,
+        edges: result.edges,
       };
     }),
 
@@ -560,7 +633,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       workflowId: workflow.id,
       workflowName: workflow.name,
       updatedAt: workflow.updatedAt || workflow.createdAt || null,
-      nodes: workflow.nodes as WorkflowNode[],
+      nodes: (workflow.nodes as WorkflowNode[]).map((node) => {
+        if (!node.parentId && node.extent == null) return node;
+        const { extent: _extent, ...rest } = node;
+        return rest;
+      }),
       edges: workflow.edges.map((edge) =>
         styleEdge({
           id: edge.id,
@@ -603,7 +680,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           ...(width || height
             ? { style: { ...(width ? { width } : {}), ...(height ? { height } : {}) } }
             : {}),
-          ...(node.extent === "parent" ? { extent: "parent" as const } : {}),
         };
       }),
       edges: state.edges.map((edge) => ({

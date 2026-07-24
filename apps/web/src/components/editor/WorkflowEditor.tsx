@@ -42,6 +42,7 @@ function WorkflowCanvas() {
   const cancelConnect = useWorkflowStore((state) => state.cancelConnect);
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const addNode = useWorkflowStore((state) => state.addNode);
+  const reparentAfterDrag = useWorkflowStore((state) => state.reparentAfterDrag);
   const { screenToFlowPosition } = useReactFlow();
   const connectClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
@@ -156,6 +157,10 @@ function WorkflowCanvas() {
         onConnect={onConnect}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodeDragStop={(_, node) => {
+          if (loopDrawMode) return;
+          reparentAfterDrag(node.id);
+        }}
         onNodeClick={(_, node) => {
           if (loopDrawMode) return;
 

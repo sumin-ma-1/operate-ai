@@ -12,9 +12,9 @@ export type FlowRect = {
   height: number;
 };
 
-const OUTER_LLM_WIDTH = 220;
-const INNER_LLM_WIDTH = 160;
-const DEFAULT_NODE_HEIGHT = 96;
+export const OUTER_LLM_WIDTH = 220;
+export const INNER_LLM_WIDTH = 160;
+export const DEFAULT_NODE_HEIGHT = 96;
 const MIN_LOOP_WIDTH = 280;
 const MIN_LOOP_HEIGHT = 160;
 
@@ -53,7 +53,7 @@ export function getLlmsInRect(nodes: WorkflowNode[], rect: FlowRect): WorkflowNo
   });
 }
 
-function rewireEdgesForWrap(
+export function rewireEdgesForWrap(
   edges: WorkflowEdge[],
   wrappedIds: Set<string>,
   loopId: string,
@@ -163,7 +163,6 @@ export function wrapNodesInLoopGraph(args: {
     return {
       ...node,
       parentId: args.loopId,
-      extent: "parent" as const,
       position: {
         x: node.position.x - loopNode.position.x,
         y: node.position.y - loopNode.position.y,

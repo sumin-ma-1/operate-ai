@@ -1,11 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import type { WorkflowNodeData, WorkflowNodeType } from "@operate-ai/workflow-schema";
+import { OUTER_LLM_WIDTH } from "@/lib/wrap-nodes-in-loop";
 
 type WorkflowNode = Node<WorkflowNodeData, WorkflowNodeType>;
 type WorkflowEdge = Edge<{ disabled?: boolean }>;
-
-const OUTER_LLM_WIDTH = 220;
 
 function stripLoopInnerClass(className?: string) {
   const next = className
@@ -41,7 +40,10 @@ function getInnerEntryExitNodes(
   };
 }
 
-function releaseChildFromLoop(child: WorkflowNode, loopNode: WorkflowNode): WorkflowNode {
+export function releaseChildFromLoop(
+  child: WorkflowNode,
+  loopNode: WorkflowNode
+): WorkflowNode {
   const { parentId: _parentId, extent: _extent, className, ...rest } = child;
 
   return {

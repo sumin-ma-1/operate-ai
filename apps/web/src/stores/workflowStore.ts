@@ -217,7 +217,7 @@ function createDefaultNode(
         data: {
           label: "",
           model: "gemma4:e4b",
-          systemPrompt: "You are a helpful assistant.",
+          systemPrompt: "",
         },
       };
     case "output":

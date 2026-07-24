@@ -180,6 +180,7 @@ export type ExecutionStreamEvent =
       maxIterations: number;
       reason: string;
       output: string;
+      checkerFeedback?: string;
     }
   | ({
       type: "completed";

@@ -263,11 +263,18 @@ class DAGExecutor:
                                 iterations = event.get("iterations", 0)
                                 max_iterations = event.get("maxIterations", 0)
                                 body = event.get("output", "")
-                                output = (
-                                    f"Stopped: {reason}\n"
-                                    f"Iterations: {iterations}/{max_iterations}\n\n"
-                                    f"{body}"
-                                )
+                                checker_feedback = event.get("checkerFeedback")
+                                parts = [
+                                    f"Stopped: {reason}",
+                                    f"Iterations: {iterations}/{max_iterations}",
+                                ]
+                                if checker_feedback and "last check:" not in reason:
+                                    parts.append(
+                                        f"Last checker feedback:\n{checker_feedback}"
+                                    )
+                                parts.append("")
+                                parts.append(body)
+                                output = "\n".join(parts)
                             elif event["type"] == "node_failed":
                                 yield {
                                     "type": "failed",

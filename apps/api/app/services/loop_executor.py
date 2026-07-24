@@ -12,8 +12,12 @@ from app.services.tool_loop import run_tool_loop
 
 
 CHECKER_SYSTEM_PROMPT = (
-    "You decide whether a workflow goal is satisfied. "
-    "Respond with DONE or CONTINUE on the first line, then one short reason line."
+    "You decide whether a workflow goal is satisfied.\n"
+    "Respond with DONE or CONTINUE on the first line only.\n"
+    "Then write 1-3 short lines that are concrete and actionable:\n"
+    "- If DONE: briefly confirm what makes the goal satisfied.\n"
+    "- If CONTINUE: list what is still missing or wrong, and what the next "
+    "revision must fix or add. Avoid vague phrases like 'improve quality'."
 )
 
 
@@ -66,6 +70,17 @@ def _is_done_marker(text: str) -> bool:
     return first_line.startswith("DONE")
 
 
+def _split_checker_response(text: str) -> tuple[str, str]:
+    """Return (first_line, body_after_first_line)."""
+    stripped = text.strip()
+    if not stripped:
+        return "", ""
+    lines = stripped.splitlines()
+    first = lines[0].strip()
+    body = "\n".join(lines[1:]).strip()
+    return first, body
+
+
 def _build_iteration_prompt(
     *,
     iteration: int,
@@ -74,6 +89,7 @@ def _build_iteration_prompt(
     previous_output: str,
     upstream_output: str,
     upstream_type: str | None,
+    checker_feedback: str | None = None,
 ) -> str:
     sections = [
         f"## Iteration {iteration} of {max_iterations}",
@@ -83,6 +99,15 @@ def _build_iteration_prompt(
 
     if previous_output and previous_output != loop_input:
         sections.extend(["## Previous Iteration Output", previous_output])
+
+    if checker_feedback:
+        sections.extend(
+            [
+                "## Goal Check Feedback",
+                checker_feedback,
+                "Revise the previous output to address this feedback and satisfy the goal.",
+            ]
+        )
 
     if upstream_output:
         sections.extend(["## Previous Step Output", upstream_output])
@@ -133,6 +158,8 @@ class LoopExecutor:
 
         last_output = loop_input
         previous_output = loop_input
+        checker_feedback: str | None = None
+        last_checker_feedback: str | None = None
         stop_reason = "Max iterations reached"
         completed_iterations = 0
 
@@ -177,8 +204,9 @@ class LoopExecutor:
                         upstream_type=upstream_source.type
                         if upstream_source
                         else None,
+                        checker_feedback=checker_feedback,
                     )
-                    if not upstream_output and iteration == 1:
+                    if not upstream_output and iteration == 1 and not checker_feedback:
                         user_prompt = build_llm_user_prompt(
                             original_input_text or loop_input,
                             loop_input,
@@ -244,23 +272,42 @@ class LoopExecutor:
                 }
 
             if _is_done_marker(last_output):
-                stop_reason = "Goal met (checker node)"
+                stop_reason = "Goal met (inner DONE marker)"
+                checker_feedback = None
                 break
 
             checker_output = await self.ollama.chat(
                 model=checker_model,
                 user_message=(
                     f"Goal:\n{goal}\n\nCurrent output:\n{last_output}\n\n"
-                    "Respond with DONE or CONTINUE on the first line."
+                    "First line must be DONE or CONTINUE.\n"
+                    "Then explain concretely: if CONTINUE, what is missing and "
+                    "what the next revision must change."
                 ),
                 system_message=CHECKER_SYSTEM_PROMPT,
             )
 
+            verdict, body = _split_checker_response(checker_output)
+
             if _is_done_marker(checker_output):
-                stop_reason = checker_output.strip().splitlines()[0].strip()
+                stop_reason = f"{verdict}: {body}" if body else verdict
+                checker_feedback = None
                 break
 
+            checker_feedback = (
+                body
+                or "Goal not yet met; revise the previous output to better satisfy the goal."
+            )
+            last_checker_feedback = checker_feedback
             previous_output = last_output
+
+        if (
+            stop_reason == "Max iterations reached"
+            and last_checker_feedback
+        ):
+            stop_reason = (
+                f"Max iterations reached — last check: {last_checker_feedback}"
+            )
 
         yield {
             "type": "loop_completed",
@@ -269,4 +316,5 @@ class LoopExecutor:
             "maxIterations": max_iterations,
             "reason": stop_reason,
             "output": last_output,
+            "checkerFeedback": last_checker_feedback,
         }

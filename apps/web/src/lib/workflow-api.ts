@@ -2,6 +2,7 @@ import type {
   ApprovalDecisionRequest,
   ExecuteWorkflowRequest,
   ExecuteWorkflowResponse,
+  LoopIterationLog,
   OllamaModel,
   WorkflowDefinition,
   WorkflowNodeType,
@@ -118,6 +119,7 @@ export type ExecutionStreamEvent =
       output: string;
       loopId?: string;
       iteration?: number;
+      iterationLogs?: LoopIterationLog[];
     }
   | {
       type: "node_failed";
@@ -181,6 +183,7 @@ export type ExecutionStreamEvent =
       reason: string;
       output: string;
       checkerFeedback?: string;
+      iterationLogs?: LoopIterationLog[];
     }
   | ({
       type: "completed";

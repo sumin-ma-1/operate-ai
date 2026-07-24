@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { getNodeTypeLabel } from "@/lib/node-labels";
-import type { NodeExecutionResult, WorkflowNodeType } from "@operate-ai/workflow-schema";
+import type {
+  LoopIterationLog,
+  NodeExecutionResult,
+  WorkflowNodeType,
+} from "@operate-ai/workflow-schema";
 
 type LogNode = {
   id: string;
@@ -25,6 +29,62 @@ function typeAccent(nodeType: string) {
   }
 }
 
+function IterationBlock({ log }: { log: LoopIterationLog }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-md border border-border/50 bg-background/40">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs"
+        aria-expanded={open}
+      >
+        <span className="material-icons text-[14px] leading-none text-muted">
+          {open ? "expand_more" : "chevron_right"}
+        </span>
+        <span className="font-medium">Iteration {log.iteration}</span>
+        <span className="text-muted">
+          · {log.entries.length} node{log.entries.length === 1 ? "" : "s"}
+        </span>
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-border/40 px-2 py-2">
+          {log.entries.map((entry) => {
+            const entryLabel =
+              entry.label?.trim() ||
+              getNodeTypeLabel(entry.nodeType as WorkflowNodeType);
+            return (
+              <div key={`${log.iteration}-${entry.nodeId}`} className="space-y-1">
+                <div className="text-[11px] font-medium text-foreground/80">
+                  {entryLabel}
+                  <span className="font-normal text-muted">
+                    {" "}
+                    ({getNodeTypeLabel(entry.nodeType as WorkflowNodeType)})
+                  </span>
+                </div>
+                <pre className="overflow-auto whitespace-pre-wrap rounded bg-background/50 px-2 py-1.5 text-[11px] text-muted scrollbar-none">
+                  {entry.output || "(empty)"}
+                </pre>
+              </div>
+            );
+          })}
+          {log.checkerFeedback ? (
+            <div className="space-y-1">
+              <div className="text-[11px] font-medium text-amber-700/90 dark:text-amber-300/90">
+                Checker feedback
+              </div>
+              <pre className="overflow-auto whitespace-pre-wrap rounded bg-amber-500/5 px-2 py-1.5 text-[11px] text-muted scrollbar-none">
+                {log.checkerFeedback}
+              </pre>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NodeLogEntry({
   result,
   label,
@@ -35,6 +95,7 @@ function NodeLogEntry({
   const isLoop = result.nodeType === "loop";
   const [open, setOpen] = useState(!isLoop);
   const typeLabel = getNodeTypeLabel(result.nodeType as WorkflowNodeType);
+  const iterationLogs = result.iterationLogs ?? [];
 
   useEffect(() => {
     setOpen(!isLoop);
@@ -59,9 +120,21 @@ function NodeLogEntry({
         </span>
       </button>
       {open && (
-        <pre className="overflow-auto whitespace-pre-wrap border-t border-border/40 px-2.5 py-2 text-xs text-muted scrollbar-none">
-          {result.output || "(empty)"}
-        </pre>
+        <div className="space-y-2 border-t border-border/40 px-2.5 py-2">
+          <pre className="overflow-auto whitespace-pre-wrap text-xs text-muted scrollbar-none">
+            {result.output || "(empty)"}
+          </pre>
+          {iterationLogs.length > 0 ? (
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                Inside loop
+              </div>
+              {iterationLogs.map((log) => (
+                <IterationBlock key={log.iteration} log={log} />
+              ))}
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

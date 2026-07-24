@@ -166,6 +166,7 @@ class DAGExecutor:
                 }
 
                 output = ""
+                iteration_logs = None
 
                 if node.type == "input":
                     try:
@@ -259,22 +260,10 @@ class DAGExecutor:
                         ):
                             yield event
                             if event["type"] == "loop_completed":
-                                reason = event.get("reason", "")
-                                iterations = event.get("iterations", 0)
-                                max_iterations = event.get("maxIterations", 0)
-                                body = event.get("output", "")
-                                checker_feedback = event.get("checkerFeedback")
-                                parts = [
-                                    f"Stopped: {reason}",
-                                    f"Iterations: {iterations}/{max_iterations}",
-                                ]
-                                if checker_feedback and "last check:" not in reason:
-                                    parts.append(
-                                        f"Last checker feedback:\n{checker_feedback}"
-                                    )
-                                parts.append("")
-                                parts.append(body)
-                                output = "\n".join(parts)
+                                # Downstream / Final Output: passed result only.
+                                # Stop reason, iterations, checker notes live in iterationLogs.
+                                output = event.get("output", "")
+                                iteration_logs = event.get("iterationLogs")
                             elif event["type"] == "node_failed":
                                 yield {
                                     "type": "failed",
@@ -349,16 +338,20 @@ class DAGExecutor:
                     nodeId=node.id,
                     nodeType=node.type,
                     output=output,
+                    iterationLogs=iteration_logs,
                 )
                 node_results.append(result)
                 final_output = output
 
-                yield {
+                completed_event: dict[str, Any] = {
                     "type": "node_completed",
                     "nodeId": node.id,
                     "nodeType": node.type,
                     "output": output,
                 }
+                if iteration_logs is not None:
+                    completed_event["iterationLogs"] = iteration_logs
+                yield completed_event
 
             yield {
                 "type": "completed",
@@ -393,6 +386,7 @@ class DAGExecutor:
                         nodeId=event["nodeId"],
                         nodeType=event["nodeType"],
                         output=event.get("output", ""),
+                        iterationLogs=event.get("iterationLogs"),
                     )
                 )
                 final_output = event.get("output", "")

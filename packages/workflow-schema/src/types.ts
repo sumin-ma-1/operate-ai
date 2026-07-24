@@ -91,10 +91,26 @@ export interface ApprovalDecisionRequest {
   editedContent?: string;
 }
 
+export interface LoopIterationLogEntry {
+  nodeId: string;
+  nodeType: WorkflowNodeType;
+  label?: string;
+  output: string;
+}
+
+export interface LoopIterationLog {
+  iteration: number;
+  entries: LoopIterationLogEntry[];
+  /** Present when this iteration ended with CONTINUE */
+  checkerFeedback?: string;
+}
+
 export interface NodeExecutionResult {
   nodeId: string;
   nodeType: WorkflowNodeType;
   output: string;
+  /** Agent loop: per-iteration inner node outputs */
+  iterationLogs?: LoopIterationLog[];
 }
 
 export interface ExecuteWorkflowResponse {

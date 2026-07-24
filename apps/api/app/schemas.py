@@ -94,10 +94,30 @@ class ApprovalDecisionRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class LoopIterationLogEntry(BaseModel):
+    node_id: str = Field(alias="nodeId")
+    node_type: str = Field(alias="nodeType")
+    label: Optional[str] = None
+    output: str
+
+    model_config = {"populate_by_name": True}
+
+
+class LoopIterationLog(BaseModel):
+    iteration: int
+    entries: list[LoopIterationLogEntry]
+    checker_feedback: Optional[str] = Field(default=None, alias="checkerFeedback")
+
+    model_config = {"populate_by_name": True}
+
+
 class NodeExecutionResult(BaseModel):
     node_id: str = Field(alias="nodeId")
     node_type: str = Field(alias="nodeType")
     output: str
+    iteration_logs: Optional[list[LoopIterationLog]] = Field(
+        default=None, alias="iterationLogs"
+    )
 
     model_config = {"populate_by_name": True}
 

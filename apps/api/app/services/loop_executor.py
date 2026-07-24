@@ -162,6 +162,7 @@ class LoopExecutor:
         last_checker_feedback: str | None = None
         stop_reason = "Max iterations reached"
         completed_iterations = 0
+        iteration_logs: list[dict[str, Any]] = []
 
         for iteration in range(1, max_iterations + 1):
             completed_iterations = iteration
@@ -174,6 +175,7 @@ class LoopExecutor:
             }
 
             iteration_outputs: dict[str, str] = {}
+            iteration_entries: list[dict[str, Any]] = []
 
             for inner_node in sorted_inner:
                 yield {
@@ -261,6 +263,14 @@ class LoopExecutor:
 
                 iteration_outputs[inner_node.id] = output
                 last_output = output
+                iteration_entries.append(
+                    {
+                        "nodeId": inner_node.id,
+                        "nodeType": inner_node.type,
+                        "label": inner_node.data.label or "",
+                        "output": output,
+                    }
+                )
 
                 yield {
                     "type": "node_completed",
@@ -274,6 +284,12 @@ class LoopExecutor:
             if _is_done_marker(last_output):
                 stop_reason = "Goal met (inner DONE marker)"
                 checker_feedback = None
+                iteration_logs.append(
+                    {
+                        "iteration": iteration,
+                        "entries": iteration_entries,
+                    }
+                )
                 break
 
             checker_output = await self.ollama.chat(
@@ -292,6 +308,13 @@ class LoopExecutor:
             if _is_done_marker(checker_output):
                 stop_reason = f"{verdict}: {body}" if body else verdict
                 checker_feedback = None
+                iteration_logs.append(
+                    {
+                        "iteration": iteration,
+                        "entries": iteration_entries,
+                        "checkerFeedback": body or None,
+                    }
+                )
                 break
 
             checker_feedback = (
@@ -300,6 +323,13 @@ class LoopExecutor:
             )
             last_checker_feedback = checker_feedback
             previous_output = last_output
+            iteration_logs.append(
+                {
+                    "iteration": iteration,
+                    "entries": iteration_entries,
+                    "checkerFeedback": checker_feedback,
+                }
+            )
 
         if (
             stop_reason == "Max iterations reached"
@@ -317,4 +347,5 @@ class LoopExecutor:
             "reason": stop_reason,
             "output": last_output,
             "checkerFeedback": last_checker_feedback,
+            "iterationLogs": iteration_logs,
         }

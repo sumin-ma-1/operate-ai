@@ -7,12 +7,29 @@ import { useStore, type Edge, type Node, type ReactFlowState } from "@xyflow/rea
 const EDGE_STROKE = "#60a5fa";
 const EDGE_STROKE_WIDTH = 8;
 
-function nodeCenter(node: Node) {
+function absolutePosition(node: Node, nodesById: Map<string, Node>) {
+  let x = node.position.x;
+  let y = node.position.y;
+  let parentId = node.parentId;
+
+  while (parentId) {
+    const parent = nodesById.get(parentId);
+    if (!parent) break;
+    x += parent.position.x;
+    y += parent.position.y;
+    parentId = parent.parentId;
+  }
+
+  return { x, y };
+}
+
+function nodeCenter(node: Node, nodesById: Map<string, Node>) {
   const width = node.measured?.width ?? node.width ?? 160;
   const height = node.measured?.height ?? node.height ?? 48;
+  const origin = absolutePosition(node, nodesById);
   return {
-    x: node.position.x + width / 2,
-    y: node.position.y + height / 2,
+    x: origin.x + width / 2,
+    y: origin.y + height / 2,
   };
 }
 
@@ -57,8 +74,8 @@ export function MiniMapEdges() {
     const target = nodesById.get(edge.target);
     if (!source || !target) return [];
 
-    const from = nodeCenter(source);
-    const to = nodeCenter(target);
+    const from = nodeCenter(source, nodesById);
+    const to = nodeCenter(target, nodesById);
 
     return [
       <line

@@ -204,6 +204,18 @@ body {
   transform: scale(1.35);
 }
 
+/* Keep edge/node toolbars above loop boxes (nodes paint over edgelabel-renderer by default). */
+.react-flow__edgelabel-renderer,
+.react-flow__viewport-portal {
+  z-index: 10;
+}
+
+.react-flow__edge-toolbar,
+.react-flow__node-toolbar {
+  z-index: 11;
+  pointer-events: all;
+}
+
 /* Zoom controls: horizontal bar centered at bottom, lifted when panel open */
 .react-flow__controls {
   display: flex !important;

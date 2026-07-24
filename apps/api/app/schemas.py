@@ -80,6 +80,7 @@ class WorkflowDefinition(BaseModel):
 class ExecuteWorkflowRequest(BaseModel):
     workflow: WorkflowDefinition
     input: Optional[str] = None
+    start_node_id: Optional[str] = Field(default=None, alias="startNodeId")
     run_id: Optional[str] = Field(default=None, alias="runId")
 
     model_config = {"populate_by_name": True}

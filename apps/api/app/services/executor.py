@@ -33,6 +33,34 @@ class DAGExecutor:
     def _outer_nodes(self, nodes: list[WorkflowNode]) -> list[WorkflowNode]:
         return [node for node in nodes if not node.parent_id]
 
+    def _reachable_from(
+        self,
+        start_node_id: str,
+        nodes: list[WorkflowNode],
+        edges: list,
+    ) -> list[WorkflowNode]:
+        from collections import defaultdict
+
+        node_map = {node.id: node for node in nodes}
+        if start_node_id not in node_map:
+            raise ValueError(f"Start node '{start_node_id}' was not found")
+
+        adjacency: dict[str, list[str]] = defaultdict(list)
+        for edge in self._active_edges(edges):
+            if edge.source in node_map and edge.target in node_map:
+                adjacency[edge.source].append(edge.target)
+
+        seen: set[str] = set()
+        stack = [start_node_id]
+        while stack:
+            current = stack.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            stack.extend(adjacency[current])
+
+        return [node for node in nodes if node.id in seen]
+
     def _topological_sort(
         self, nodes: list[WorkflowNode], edges: list
     ) -> list[WorkflowNode]:
@@ -97,6 +125,16 @@ class DAGExecutor:
 
         outer_nodes = self._outer_nodes(workflow.nodes)
 
+        if request.start_node_id:
+            try:
+                outer_nodes = self._reachable_from(
+                    request.start_node_id, outer_nodes, workflow.edges
+                )
+            except ValueError as exc:
+                run_registry.discard(run_id)
+                yield {"type": "failed", "error": str(exc)}
+                return
+
         try:
             sorted_nodes = self._topological_sort(outer_nodes, workflow.edges)
         except ValueError as exc:
@@ -131,8 +169,18 @@ class DAGExecutor:
 
                 if node.type == "input":
                     try:
-                        output = build_input_text(node, request.input)
-                        original_input_text = output
+                        runtime_input = (
+                            request.input
+                            if request.start_node_id is None
+                            or node.id == request.start_node_id
+                            else None
+                        )
+                        output = build_input_text(node, runtime_input)
+                        if (
+                            request.start_node_id is None
+                            or node.id == request.start_node_id
+                        ):
+                            original_input_text = output
                     except ValueError as exc:
                         yield {
                             "type": "node_failed",

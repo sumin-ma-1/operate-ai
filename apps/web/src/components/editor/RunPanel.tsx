@@ -8,6 +8,7 @@ import { OutputActions } from "@/components/editor/OutputActions";
 import { Button } from "@/components/ui/Button";
 import { useResizableWidth } from "@/hooks/useResizableWidth";
 import { getExecutionMessage, getExecutionOrder } from "@/lib/execution-order";
+import { getFinalOutputHeading } from "@/lib/node-labels";
 import { executeWorkflowStream } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
@@ -191,7 +192,10 @@ export function RunPanel() {
             <div className="shrink-0">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="text-xs font-semibold uppercase text-muted">
-                  Final Output
+                  {getFinalOutputHeading({
+                    nodeResults: lastResult.nodeResults,
+                    nodes,
+                  })}
                 </h4>
                 <OutputActions
                   content={lastResult.finalOutput || ""}

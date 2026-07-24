@@ -78,6 +78,8 @@ export interface WorkflowDefinition {
 export interface ExecuteWorkflowRequest {
   workflow: WorkflowDefinition;
   input?: string;
+  /** When set, only this Start Point and nodes reachable from it are executed. */
+  startNodeId?: string;
   runId?: string;
 }
 

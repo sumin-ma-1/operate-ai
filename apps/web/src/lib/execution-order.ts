@@ -13,17 +13,62 @@ type ExecutionEdge = {
   disabled?: boolean;
 };
 
-export function getExecutionOrder(
+/** Outer-graph nodes reachable by following active edges from startNodeId. */
+export function getReachableNodeIds(
+  startNodeId: string,
   nodes: ExecutionNode[],
   edges: ExecutionEdge[]
+): Set<string> {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  if (!nodeIds.has(startNodeId)) {
+    return new Set();
+  }
+
+  const adjacency = new Map<string, string[]>();
+  for (const node of nodes) {
+    adjacency.set(node.id, []);
+  }
+
+  for (const edge of edges) {
+    if (edge.disabled) continue;
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) continue;
+    adjacency.get(edge.source)?.push(edge.target);
+  }
+
+  const seen = new Set<string>();
+  const stack = [startNodeId];
+
+  while (stack.length > 0) {
+    const currentId = stack.pop();
+    if (!currentId || seen.has(currentId)) continue;
+    seen.add(currentId);
+    for (const neighbor of adjacency.get(currentId) || []) {
+      stack.push(neighbor);
+    }
+  }
+
+  return seen;
+}
+
+export function getExecutionOrder(
+  nodes: ExecutionNode[],
+  edges: ExecutionEdge[],
+  startNodeId?: string
 ): ExecutionNode[] {
   const outerNodes = nodes.filter((node) => !node.parentId);
   const activeEdges = edges.filter((edge) => !edge.disabled);
-  const nodeMap = new Map(outerNodes.map((node) => [node.id, node]));
-  const inDegree = new Map(outerNodes.map((node) => [node.id, 0]));
+
+  const scopedNodes = startNodeId
+    ? outerNodes.filter((node) =>
+        getReachableNodeIds(startNodeId, outerNodes, activeEdges).has(node.id)
+      )
+    : outerNodes;
+
+  const nodeMap = new Map(scopedNodes.map((node) => [node.id, node]));
+  const inDegree = new Map(scopedNodes.map((node) => [node.id, 0]));
   const adjacency = new Map<string, string[]>();
 
-  for (const node of outerNodes) {
+  for (const node of scopedNodes) {
     adjacency.set(node.id, []);
   }
 
@@ -33,7 +78,7 @@ export function getExecutionOrder(
     inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
   }
 
-  const queue = outerNodes
+  const queue = scopedNodes
     .map((node) => node.id)
     .filter((nodeId) => (inDegree.get(nodeId) || 0) === 0);
   const sorted: ExecutionNode[] = [];
@@ -56,7 +101,7 @@ export function getExecutionOrder(
     }
   }
 
-  return sorted.length === outerNodes.length ? sorted : outerNodes;
+  return sorted.length === scopedNodes.length ? sorted : scopedNodes;
 }
 
 export function getExecutionMessage(

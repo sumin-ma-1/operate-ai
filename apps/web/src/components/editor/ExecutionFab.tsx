@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Textarea } from "@/components/ui/Textarea";
 import { useResizableHeight } from "@/hooks/useResizableHeight";
-import { getNodeTypeLabel } from "@/lib/node-labels";
+import { getNodeTypeLabel, getFinalOutputHeading } from "@/lib/node-labels";
 import { submitApprovalDecision } from "@/lib/workflow-api";
 import { useWorkflowStore, type PendingApproval } from "@/stores/workflowStore";
 
@@ -175,7 +175,10 @@ function PanelBody({
           <section>
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-300/90">
-                Final Output
+                {getFinalOutputHeading({
+                  nodeResults: lastResult.nodeResults,
+                  nodes,
+                })}
               </h4>
               <OutputActions
                 content={lastResult.finalOutput || ""}

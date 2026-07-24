@@ -80,7 +80,8 @@ export function useWorkflowExecution() {
           source: edge.source,
           target: edge.target,
           disabled: Boolean(edge.data?.disabled),
-        }))
+        })),
+        startNodeId
       );
 
       const firstNode = orderedNodes[0];
@@ -103,7 +104,7 @@ export function useWorkflowExecution() {
       try {
         const workflow = toWorkflowDefinition();
         const result = await executeWorkflowStream(
-          { workflow, input: inputValue },
+          { workflow, input: inputValue, startNodeId },
           (event) => {
             if (event.type === "started") {
               setExecutionProgress(

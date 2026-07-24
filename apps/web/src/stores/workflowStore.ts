@@ -25,6 +25,11 @@ import {
   syncLoopMembershipOnDragStop,
 } from "@/lib/loop-membership";
 import {
+  materializeClipboard,
+  serializeSelection,
+  type WorkflowClipboard,
+} from "@/lib/clipboard-selection";
+import {
   createLoopFromDraw,
   DEFAULT_NODE_HEIGHT,
   getLlmsInRect,
@@ -101,6 +106,10 @@ interface WorkflowState {
   onConnect: (connection: Connection) => void;
   selectNode: (nodeId: string | null) => void;
   selectEdge: (edgeId: string | null) => void;
+  clearCanvasSelection: () => void;
+  selectAllNodes: () => void;
+  copySelection: () => boolean;
+  pasteClipboard: () => boolean;
   setConnectSource: (nodeId: string | null) => void;
   handleConnectNodeClick: (nodeId: string) => void;
   cancelConnect: () => void;
@@ -190,6 +199,7 @@ function isValidConnection(source: WorkflowNode, target: WorkflowNode) {
 }
 
 let nodeCounter = 1;
+let workflowClipboard: WorkflowClipboard | null = null;
 
 function createDefaultNode(
   type: WorkflowNodeType,
@@ -310,6 +320,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         }
       );
 
+      const selectedCount = nextNodes.filter((node) => node.selected).length;
+
       return {
         nodes: nextNodes,
         edges:
@@ -321,7 +333,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             : state.edges,
         selectedNodeId: removedIds.has(state.selectedNodeId ?? "")
           ? null
-          : state.selectedNodeId,
+          : selectedCount > 1
+            ? null
+            : state.selectedNodeId,
         connectSourceId: removedIds.has(state.connectSourceId ?? "")
           ? null
           : state.connectSourceId,
@@ -346,14 +360,79 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   selectNode: (nodeId) =>
-    set({ selectedNodeId: nodeId, selectedEdgeId: null }),
+    set((state) => ({
+      selectedNodeId: nodeId,
+      selectedEdgeId: null,
+      nodes: state.nodes.map((node) => ({
+        ...node,
+        selected: nodeId != null && node.id === nodeId,
+      })),
+    })),
 
   selectEdge: (edgeId) =>
-    set({
+    set((state) => ({
       selectedEdgeId: edgeId,
       selectedNodeId: null,
       connectSourceId: null,
-    }),
+      nodes: state.nodes.map((node) => ({ ...node, selected: false })),
+      edges: state.edges.map((edge) => ({
+        ...edge,
+        selected: edgeId != null && edge.id === edgeId,
+      })),
+    })),
+
+  clearCanvasSelection: () =>
+    set((state) => ({
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      connectSourceId: null,
+      nodes: state.nodes.map((node) => ({ ...node, selected: false })),
+      edges: state.edges.map((edge) => ({ ...edge, selected: false })),
+    })),
+
+  selectAllNodes: () =>
+    set((state) => ({
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      connectSourceId: null,
+      nodes: state.nodes.map((node) => ({ ...node, selected: true })),
+      edges: state.edges.map((edge) => ({ ...edge, selected: false })),
+    })),
+
+  copySelection: () => {
+    const state = get();
+    const snapshot = serializeSelection(state.nodes, state.edges);
+    if (!snapshot) return false;
+    workflowClipboard = snapshot;
+    return true;
+  },
+
+  pasteClipboard: () => {
+    if (!workflowClipboard || workflowClipboard.nodes.length === 0) {
+      return false;
+    }
+
+    const pasted = materializeClipboard({
+      clipboard: workflowClipboard,
+      createId: (type) => `${type}-${nodeCounter++}`,
+    });
+
+    set((state) => ({
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      connectSourceId: null,
+      nodes: [
+        ...state.nodes.map((node) => ({ ...node, selected: false })),
+        ...pasted.nodes,
+      ],
+      edges: [
+        ...state.edges.map((edge) => ({ ...edge, selected: false })),
+        ...pasted.edges.map(styleEdge),
+      ],
+    }));
+
+    return true;
+  },
 
   setConnectSource: (nodeId) => set({ connectSourceId: nodeId }),
 
@@ -502,7 +581,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           bounds,
         });
         return {
-          nodes: created.nodes,
+          nodes: created.nodes.map((node) => ({
+            ...node,
+            selected: node.id === loopId,
+          })),
           selectedNodeId: loopId,
           selectedEdgeId: null,
           connectSourceId: null,
@@ -524,7 +606,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       }
 
       return {
-        nodes: result.nodes,
+        nodes: result.nodes.map((node) => ({
+          ...node,
+          selected: node.id === loopId,
+        })),
         edges: result.edges,
         selectedNodeId: loopId,
         selectedEdgeId: null,

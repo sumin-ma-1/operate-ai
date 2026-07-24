@@ -7,6 +7,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  SelectionMode,
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -25,10 +26,16 @@ const DROP_NODE_WIDTH = 220;
 const DROP_NODE_HEIGHT = 96;
 const CONNECT_CLICK_DELAY_MS = 220;
 
+function isEditableHotkeyTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
 function WorkflowCanvas() {
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
-  const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
   const selectedEdgeId = useWorkflowStore((state) => state.selectedEdgeId);
   const connectSourceId = useWorkflowStore((state) => state.connectSourceId);
   const loopDrawMode = useWorkflowStore((state) => state.loopDrawMode);
@@ -41,6 +48,12 @@ function WorkflowCanvas() {
   );
   const cancelConnect = useWorkflowStore((state) => state.cancelConnect);
   const selectNode = useWorkflowStore((state) => state.selectNode);
+  const clearCanvasSelection = useWorkflowStore(
+    (state) => state.clearCanvasSelection
+  );
+  const selectAllNodes = useWorkflowStore((state) => state.selectAllNodes);
+  const copySelection = useWorkflowStore((state) => state.copySelection);
+  const pasteClipboard = useWorkflowStore((state) => state.pasteClipboard);
   const addNode = useWorkflowStore((state) => state.addNode);
   const reparentAfterDrag = useWorkflowStore((state) => state.reparentAfterDrag);
   const { screenToFlowPosition } = useReactFlow();
@@ -70,6 +83,47 @@ function WorkflowCanvas() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [connectSourceId, cancelConnect]);
+
+  useEffect(() => {
+    if (loopDrawMode) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableHotkeyTarget(event.target)) return;
+
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
+
+      const key = event.key.toLowerCase();
+      if (key === "c") {
+        if (copySelection()) {
+          event.preventDefault();
+        }
+        return;
+      }
+      if (key === "v") {
+        if (pasteClipboard()) {
+          event.preventDefault();
+        }
+        return;
+      }
+      if (key === "a") {
+        event.preventDefault();
+        clearConnectClickTimer();
+        cancelConnect();
+        selectAllNodes();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    loopDrawMode,
+    copySelection,
+    pasteClipboard,
+    selectAllNodes,
+    cancelConnect,
+    clearConnectClickTimer,
+  ]);
 
   const onDragOver = useCallback((event: DragEvent) => {
     if (!event.dataTransfer.types.includes(PALETTE_DRAG_MIME)) return;
@@ -126,7 +180,6 @@ function WorkflowCanvas() {
 
     return {
       ...node,
-      selected: node.id === selectedNodeId,
       draggable: !loopDrawMode,
       selectable: !loopDrawMode,
       className: [
@@ -141,7 +194,7 @@ function WorkflowCanvas() {
 
   const edgesWithSelection = edges.map((edge) => ({
     ...edge,
-    selected: edge.id === selectedEdgeId,
+    selected: edge.selected || edge.id === selectedEdgeId,
   }));
 
   return (
@@ -157,12 +210,19 @@ function WorkflowCanvas() {
         onConnect={onConnect}
         onDragOver={onDragOver}
         onDrop={onDrop}
-        onNodeDragStop={(_, node) => {
+        onNodeDragStop={(_, _node, dragged) => {
           if (loopDrawMode) return;
-          reparentAfterDrag(node.id);
+          for (const node of dragged) {
+            reparentAfterDrag(node.id);
+          }
         }}
-        onNodeClick={(_, node) => {
+        onNodeClick={(event, node) => {
           if (loopDrawMode) return;
+          if (event.shiftKey) {
+            clearConnectClickTimer();
+            cancelConnect();
+            return;
+          }
 
           const isConnecting = Boolean(
             useWorkflowStore.getState().connectSourceId
@@ -197,8 +257,7 @@ function WorkflowCanvas() {
           if (loopDrawMode) return;
           clearConnectClickTimer();
           cancelConnect();
-          selectNode(null);
-          selectEdge(null);
+          clearCanvasSelection();
         }}
         onNodesDelete={() => {
           clearConnectClickTimer();
@@ -211,6 +270,9 @@ function WorkflowCanvas() {
         nodeTypes={nodeTypes}
         colorMode="dark"
         fitView
+        selectionOnDrag={!loopDrawMode && !connectSourceId}
+        selectionMode={SelectionMode.Partial}
+        multiSelectionKeyCode="Shift"
         panOnDrag={loopDrawMode ? false : [1, 2]}
         zoomOnScroll={!loopDrawMode}
         zoomOnPinch={!loopDrawMode}

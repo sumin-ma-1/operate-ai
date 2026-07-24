@@ -110,6 +110,7 @@ interface WorkflowState {
   selectAllNodes: () => void;
   copySelection: () => boolean;
   pasteClipboard: () => boolean;
+  insertClipboard: (clipboard: WorkflowClipboard) => boolean;
   setConnectSource: (nodeId: string | null) => void;
   handleConnectNodeClick: (nodeId: string) => void;
   cancelConnect: () => void;
@@ -411,9 +412,16 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (!workflowClipboard || workflowClipboard.nodes.length === 0) {
       return false;
     }
+    return get().insertClipboard(workflowClipboard);
+  },
+
+  insertClipboard: (clipboard) => {
+    if (!clipboard.nodes.length) {
+      return false;
+    }
 
     const pasted = materializeClipboard({
-      clipboard: workflowClipboard,
+      clipboard,
       createId: (type) => `${type}-${nodeCounter++}`,
     });
 

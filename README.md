@@ -103,10 +103,14 @@ pnpm dev:web
 
 Open [http://localhost:3000](http://localhost:3000) → **New Workflow** → edit nodes → **Run from Start Point**.
 
+Browse and share workflows in **Open Space** (`/community`): publish a snapshot from the editor, or fork a community post into your private workflows. Published posts include prompts publicly; large Start Point attachments are stripped. Publish is lightly rate-limited per client IP.
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API |
 | `NEXT_PUBLIC_API_URL` | `/backend` | Web → FastAPI proxy (`:8000`) |
+| `COMMUNITY_PUBLISH_RATE_LIMIT` | `10` | Max community publishes per window |
+| `COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS` | `3600` | Rate-limit window (seconds) |
 
 ## Stack
 
@@ -145,3 +149,8 @@ pnpm build:web      # Production build
 | `GET` | `/models` | List Ollama models |
 | `GET/POST` | `/workflows` | List / save workflows |
 | `GET/DELETE` | `/workflows/{id}` | Get / delete workflow |
+| `GET` | `/community` | List community posts (`q`, `tag`, `sort`) |
+| `GET` | `/community/{id}` | Community post detail + workflow snapshot |
+| `POST` | `/community` | Publish workflow snapshot |
+| `POST` | `/community/{id}/fork` | Fork into a private workflow |
+| `DELETE` | `/community/{id}` | Delete post (requires `deleteToken`) |

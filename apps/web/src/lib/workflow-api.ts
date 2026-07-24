@@ -1,9 +1,12 @@
 import type {
   ApprovalDecisionRequest,
+  CommunityPost,
+  CommunityPostSummary,
   ExecuteWorkflowRequest,
   ExecuteWorkflowResponse,
   LoopIterationLog,
   OllamaModel,
+  PublishCommunityRequest,
   WorkflowDefinition,
   WorkflowNodeType,
   WorkflowSummary,
@@ -304,4 +307,50 @@ export async function executeWorkflowStream(
 export async function fetchModels(): Promise<OllamaModel[]> {
   const data = await request<{ models: OllamaModel[] }>("/models");
   return data.models;
+}
+
+export async function fetchCommunityPosts(params?: {
+  q?: string;
+  tag?: string;
+  sort?: "newest" | "forks";
+}): Promise<CommunityPostSummary[]> {
+  const search = new URLSearchParams();
+  if (params?.q) search.set("q", params.q);
+  if (params?.tag) search.set("tag", params.tag);
+  if (params?.sort) search.set("sort", params.sort);
+  const query = search.toString();
+  return request<CommunityPostSummary[]>(
+    `/community${query ? `?${query}` : ""}`
+  );
+}
+
+export async function fetchCommunityPost(id: string): Promise<CommunityPost> {
+  return request<CommunityPost>(`/community/${id}`);
+}
+
+export async function publishCommunityPost(
+  payload: PublishCommunityRequest
+): Promise<CommunityPost> {
+  return request<CommunityPost>("/community", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function forkCommunityPost(
+  id: string
+): Promise<WorkflowDefinition> {
+  return request<WorkflowDefinition>(`/community/${id}/fork`, {
+    method: "POST",
+  });
+}
+
+export async function deleteCommunityPost(
+  id: string,
+  deleteToken: string
+): Promise<void> {
+  await request(`/community/${id}`, {
+    method: "DELETE",
+    body: JSON.stringify({ deleteToken }),
+  });
 }

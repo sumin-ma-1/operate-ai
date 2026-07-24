@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type MouseEvent } from "react";
 
 import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
 
+import { workflowDefinitionToClipboard } from "@/lib/clipboard-selection";
 import { NODE_TYPE_LABELS } from "@/lib/node-labels";
+import {
+  listStarred,
+  unstarWorkflow,
+  type StarredWorkflow,
+} from "@/lib/workflow-stars";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 export const PALETTE_DRAG_MIME = "application/operate-ai-node";
@@ -80,13 +86,20 @@ const chipStyles: Record<
 export function AddNodeFab() {
   const addNode = useWorkflowStore((state) => state.addNode);
   const startLoopDrawMode = useWorkflowStore((state) => state.startLoopDrawMode);
+  const insertClipboard = useWorkflowStore((state) => state.insertClipboard);
   const loopDrawMode = useWorkflowStore((state) => state.loopDrawMode);
   const [open, setOpen] = useState(false);
+  const [starred, setStarred] = useState<StarredWorkflow[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
+  const refreshStarred = () => {
+    setStarred(listStarred());
+  };
+
   useEffect(() => {
     if (!open) return;
+    refreshStarred();
 
     const handlePointerDown = (event: MouseEvent) => {
       if (draggingRef.current) return;
@@ -101,11 +114,19 @@ export function AddNodeFab() {
       }
     };
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "operate-ai:workflow-stars") {
+        refreshStarred();
+      }
+    };
+
     window.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [open]);
 
@@ -143,6 +164,18 @@ export function AddNodeFab() {
     dragGhostRef.current = null;
   };
 
+  const handleInsertStarred = (item: StarredWorkflow) => {
+    const clipboard = workflowDefinitionToClipboard(item.workflow);
+    insertClipboard(clipboard);
+    setOpen(false);
+  };
+
+  const handleUnstar = (event: MouseEvent, id: string) => {
+    event.stopPropagation();
+    unstarWorkflow(id);
+    refreshStarred();
+  };
+
   return (
     <div ref={rootRef} className="pointer-events-none absolute top-4 left-4 z-20">
       <div className="pointer-events-auto relative">
@@ -160,7 +193,7 @@ export function AddNodeFab() {
         </button>
 
         {open && (
-          <div className="absolute top-0 left-14 w-64 rounded-2xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur-sm">
+          <div className="absolute top-0 left-14 max-h-[min(70vh,520px)] w-64 overflow-y-auto rounded-2xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur-sm scrollbar-none">
             <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
               Add node
             </p>
@@ -209,6 +242,55 @@ export function AddNodeFab() {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <p className="mb-2 flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <span className="material-icons text-[14px] leading-none text-amber-300">
+                  star
+                </span>
+                Starred
+              </p>
+              {starred.length === 0 ? (
+                <p className="px-1 text-[11px] leading-relaxed text-muted">
+                  Star a workflow in Open Space to see it here. Click to paste
+                  into this canvas.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {starred.map((item) => (
+                    <div key={item.id} className="group relative">
+                      <button
+                        type="button"
+                        className="w-full rounded-md border border-white/15 bg-transparent px-3 py-2 pr-8 text-left transition hover:border-white/30 hover:bg-white/5"
+                        onClick={() => handleInsertStarred(item)}
+                        title="Insert into canvas"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex max-w-[55%] shrink-0 truncate rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-foreground/90">
+                            {item.title}
+                          </span>
+                          <span className="truncate text-xs text-muted">
+                            {item.workflow.nodes.length} nodes
+                            {item.authorName ? ` · ${item.authorName}` : ""}
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className="absolute right-1.5 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100 hover:bg-black/55"
+                        title="Unstar"
+                        aria-label={`Unstar ${item.title}`}
+                        onClick={(event) => handleUnstar(event, item.id)}
+                      >
+                        <span className="material-icons text-[14px] leading-none">
+                          close
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

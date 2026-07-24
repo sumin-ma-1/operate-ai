@@ -72,7 +72,7 @@ function IterationBlock({ log }: { log: LoopIterationLog }) {
           {log.checkerFeedback ? (
             <div className="space-y-1">
               <div className="text-[11px] font-medium text-amber-700/90 dark:text-amber-300/90">
-                Checker feedback
+                Checker Feedback
               </div>
               <pre className="overflow-auto whitespace-pre-wrap rounded bg-amber-500/5 px-2 py-1.5 text-[11px] text-muted scrollbar-none">
                 {log.checkerFeedback}

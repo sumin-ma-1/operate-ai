@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { PublishCommunityModal } from "@/components/editor/PublishCommunityModal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
@@ -19,6 +20,7 @@ export function EditorHeader() {
   const setWorkflowMeta = useWorkflowStore((state) => state.setWorkflowMeta);
   const toWorkflowDefinition = useWorkflowStore((state) => state.toWorkflowDefinition);
   const [isSaving, setIsSaving] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     variant: "success" | "error";
@@ -83,6 +85,13 @@ export function EditorHeader() {
         </div>
         <div className="flex items-center gap-3">
           <Button
+            variant="secondary"
+            onClick={() => setPublishOpen(true)}
+            className="!rounded-full px-4"
+          >
+            Publish
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={isSaving}
             className="inline-flex items-center gap-1.5 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-4 py-1.0 shadow-[0_2px_12px_rgba(99,102,241,0.22)] hover:shadow-[0_2px_14px_rgba(99,102,241,0.32)] hover:!opacity-100"
@@ -96,6 +105,20 @@ export function EditorHeader() {
           </Button>
         </div>
       </header>
+
+      <PublishCommunityModal
+        open={publishOpen}
+        workflow={toWorkflowDefinition()}
+        onClose={() => setPublishOpen(false)}
+        onPublished={(postId) => {
+          setToast({
+            message: "Published to Open Space",
+            variant: "success",
+          });
+          router.push(`/community/${postId}`);
+        }}
+        onError={(message) => setToast({ message, variant: "error" })}
+      />
 
       {toast && (
         <Toast

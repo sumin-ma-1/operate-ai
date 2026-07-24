@@ -132,3 +132,33 @@ export interface WorkflowSummary {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface CommunityPostSummary {
+  id: string;
+  title: string;
+  description?: string;
+  authorName: string;
+  tags: string[];
+  forkCount: number;
+  nodeCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityPost extends CommunityPostSummary {
+  workflow: WorkflowDefinition;
+  /** Returned only on publish; store locally to delete the post later */
+  deleteToken?: string;
+}
+
+export interface PublishCommunityRequest {
+  authorName: string;
+  title: string;
+  description?: string;
+  tags?: string[];
+  workflow: WorkflowDefinition;
+}
+
+export interface DeleteCommunityRequest {
+  deleteToken: string;
+}

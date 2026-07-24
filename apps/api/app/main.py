@@ -1,16 +1,27 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+from app.config import (
+    COMMUNITY_PUBLISH_RATE_LIMIT,
+    COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS,
+)
 from app.schemas import (
     ApprovalDecisionRequest,
+    CommunityPost,
+    CommunityPostSummary,
+    DeleteCommunityRequest,
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
+    PublishCommunityRequest,
     WorkflowDefinition,
     WorkflowSummary,
 )
+from app.services.community_sanitize import strip_large_attachments
+from app.services.community_store import CommunityStore
 from app.services.executor import DAGExecutor
 from app.services.ollama import OllamaService
+from app.services.rate_limit import SlidingWindowRateLimiter
 from app.services.run_registry import run_registry
 from app.services.workflow_store import WorkflowStore
 
@@ -31,6 +42,26 @@ app.add_middleware(
 ollama_service = OllamaService()
 executor = DAGExecutor(ollama_service)
 workflow_store = WorkflowStore()
+community_store = CommunityStore()
+publish_rate_limiter = SlidingWindowRateLimiter(
+    COMMUNITY_PUBLISH_RATE_LIMIT,
+    COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS,
+)
+
+
+def _client_key(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+def _new_workflow_id() -> str:
+    import time
+
+    return f"wf-{int(time.time() * 1000):x}"
 
 
 @app.get("/health")
@@ -133,4 +164,94 @@ async def delete_workflow(workflow_id: str) -> dict[str, bool]:
     deleted = workflow_store.delete_workflow(workflow_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Workflow not found")
+    return {"deleted": True}
+
+
+@app.get(
+    "/community",
+    response_model=list[CommunityPostSummary],
+    response_model_by_alias=True,
+)
+async def list_community(
+    q: str | None = None,
+    tag: str | None = None,
+    sort: str = "newest",
+) -> list[CommunityPostSummary]:
+    if sort not in {"newest", "forks"}:
+        raise HTTPException(status_code=400, detail="sort must be newest or forks")
+    return community_store.list_posts(q=q, tag=tag, sort=sort)  # type: ignore[arg-type]
+
+
+@app.get(
+    "/community/{post_id}",
+    response_model=CommunityPost,
+    response_model_by_alias=True,
+)
+async def get_community_post(post_id: str) -> CommunityPost:
+    post = community_store.get_post(post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="Community post not found")
+    return post
+
+
+@app.post(
+    "/community",
+    response_model=CommunityPost,
+    response_model_by_alias=True,
+)
+async def publish_community(
+    payload: PublishCommunityRequest,
+    request: Request,
+) -> CommunityPost:
+    if not publish_rate_limiter.allow(_client_key(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Publish rate limit exceeded. Try again later.",
+        )
+
+    snapshot = strip_large_attachments(payload.workflow)
+    return community_store.publish(
+        author_name=payload.author_name,
+        title=payload.title,
+        description=payload.description,
+        tags=payload.tags,
+        workflow=snapshot,
+    )
+
+
+@app.post(
+    "/community/{post_id}/fork",
+    response_model=WorkflowDefinition,
+    response_model_by_alias=True,
+)
+async def fork_community_post(post_id: str) -> WorkflowDefinition:
+    post = community_store.get_post(post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="Community post not found")
+
+    forked = WorkflowDefinition.model_validate(
+        post.workflow.model_dump(by_alias=True)
+    )
+    forked.id = _new_workflow_id()
+    base_name = post.title.strip() or forked.name or "Untitled"
+    forked.name = f"{base_name} (fork)"
+    forked.created_at = None
+    forked.updated_at = None
+
+    saved = workflow_store.save_workflow(forked)
+    community_store.increment_fork_count(post_id)
+    return saved
+
+
+@app.delete("/community/{post_id}")
+async def delete_community_post(
+    post_id: str,
+    payload: DeleteCommunityRequest,
+) -> dict[str, bool]:
+    try:
+        deleted = community_store.delete_post(post_id, payload.delete_token)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Community post not found")
     return {"deleted": True}

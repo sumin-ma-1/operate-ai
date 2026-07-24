@@ -138,3 +138,40 @@ class WorkflowSummary(BaseModel):
     updated_at: Optional[str] = Field(default=None, alias="updatedAt")
 
     model_config = {"populate_by_name": True}
+
+
+class CommunityPostSummary(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    author_name: str = Field(alias="authorName")
+    tags: list[str] = Field(default_factory=list)
+    fork_count: int = Field(alias="forkCount")
+    node_count: int = Field(alias="nodeCount")
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class CommunityPost(CommunityPostSummary):
+    workflow: WorkflowDefinition
+    delete_token: Optional[str] = Field(default=None, alias="deleteToken")
+
+    model_config = {"populate_by_name": True}
+
+
+class PublishCommunityRequest(BaseModel):
+    author_name: str = Field(alias="authorName", min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    tags: Optional[list[str]] = Field(default=None, max_length=8)
+    workflow: WorkflowDefinition
+
+    model_config = {"populate_by_name": True}
+
+
+class DeleteCommunityRequest(BaseModel):
+    delete_token: str = Field(alias="deleteToken", min_length=1)
+
+    model_config = {"populate_by_name": True}

@@ -1,6 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 
-import type { WorkflowNodeData, WorkflowNodeType } from "@operate-ai/workflow-schema";
+import type {
+  WorkflowDefinition,
+  WorkflowNodeData,
+  WorkflowNodeType,
+} from "@operate-ai/workflow-schema";
 import { getAbsolutePosition } from "@/lib/loop-membership";
 import { OUTER_LLM_WIDTH } from "@/lib/wrap-nodes-in-loop";
 
@@ -89,6 +93,47 @@ export function serializeSelection(
     });
 
   return { nodes: selectedNodes, edges: selectedEdges };
+}
+
+/** Convert a saved WorkflowDefinition into a pasteable clipboard snapshot. */
+export function workflowDefinitionToClipboard(
+  workflow: WorkflowDefinition
+): WorkflowClipboard {
+  const nodes = workflow.nodes.map((node) => {
+    const width = node.style?.width;
+    const height = node.style?.height;
+    const base = {
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: node.data,
+      ...(node.parentId ? { parentId: node.parentId } : {}),
+      ...(width || height
+        ? {
+            style: {
+              ...(width ? { width } : {}),
+              ...(height ? { height } : {}),
+            },
+          }
+        : {}),
+      ...(node.parentId ? { className: "loop-inner-node" } : {}),
+    };
+    return base as WorkflowNode;
+  });
+
+  const edges = workflow.edges.map(
+    (edge) =>
+      ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle ?? null,
+        targetHandle: edge.targetHandle ?? null,
+        data: { disabled: Boolean(edge.disabled) },
+      }) as WorkflowEdge
+  );
+
+  return { nodes, edges };
 }
 
 export function materializeClipboard(args: {

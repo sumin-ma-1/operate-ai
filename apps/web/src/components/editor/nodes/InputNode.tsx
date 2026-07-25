@@ -9,6 +9,7 @@ import { useWorkflowExecution } from "@/hooks/useWorkflowExecution";
 import { formatAttachmentSummary } from "@/lib/attachments";
 import { getNodeTypeLabel } from "@/lib/node-labels";
 import { Position } from "@/lib/flow";
+import { useWorkflowStore } from "@/stores/workflowStore";
 
 import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
@@ -16,6 +17,8 @@ type InputNodeType = Node<WorkflowNodeData, "input">;
 
 export function InputNode({ id, data }: NodeProps<InputNodeType>) {
   const { run, stop, isRunning } = useWorkflowExecution();
+  const runningStartNodeId = useWorkflowStore((state) => state.runningStartNodeId);
+  const isThisRunning = isRunning && runningStartNodeId === id;
   const attachmentSummary = formatAttachmentSummary(data.attachments);
   const preview = data.value || attachmentSummary || "Enter prompt in property panel";
   const canRun =
@@ -23,8 +26,11 @@ export function InputNode({ id, data }: NodeProps<InputNodeType>) {
 
   const handleRunClick = (event: MouseEvent) => {
     event.stopPropagation();
-    if (isRunning) {
+    if (isThisRunning) {
       stop();
+      return;
+    }
+    if (isRunning) {
       return;
     }
     void run(id);
@@ -39,14 +45,20 @@ export function InputNode({ id, data }: NodeProps<InputNodeType>) {
         <button
           type="button"
           onClick={handleRunClick}
-          disabled={!isRunning && !canRun}
-          title={isRunning ? "Stop" : "Run"}
-          aria-label={isRunning ? "Stop" : "Run"}
+          disabled={isThisRunning ? false : isRunning || !canRun}
+          title={
+            isThisRunning
+              ? "Stop"
+              : isRunning
+                ? "Another Start Point is running"
+                : "Run"
+          }
+          aria-label={isThisRunning ? "Stop" : "Run"}
           className={`nodrag nopan group inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-sky-400/30 bg-sky-800/80 text-sky-50 transition hover:border-sky-300/40 hover:bg-sky-700/90 disabled:cursor-not-allowed disabled:opacity-40 ${
-            isRunning ? "hover:border-red-400/40 hover:bg-red-700/90" : ""
+            isThisRunning ? "hover:border-red-400/40 hover:bg-red-700/90" : ""
           }`}
         >
-          {isRunning ? (
+          {isThisRunning ? (
             <>
               <span className="group-hover:hidden">
                 <SpinnerIcon size={12} className="text-sky-50" />

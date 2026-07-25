@@ -93,6 +93,8 @@ interface WorkflowState {
   connectSourceId: string | null;
   loopDrawMode: boolean;
   isRunning: boolean;
+  /** Start Point that started the current run, if any */
+  runningStartNodeId: string | null;
   executionPanelOpen: boolean;
   executionError: string | null;
   lastResult: ExecuteWorkflowResponse | null;
@@ -126,7 +128,7 @@ interface WorkflowState {
   setEdgeDisabled: (edgeId: string, disabled: boolean) => void;
   loadWorkflow: (workflow: WorkflowDefinition) => void;
   toWorkflowDefinition: () => WorkflowDefinition;
-  setRunning: (isRunning: boolean) => void;
+  setRunning: (isRunning: boolean, startNodeId?: string | null) => void;
   setExecutionPanelOpen: (open: boolean) => void;
   setExecutionError: (error: string | null) => void;
   setExecutionProgress: (items: ExecutionProgressNode[]) => void;
@@ -268,6 +270,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   connectSourceId: null,
   loopDrawMode: false,
   isRunning: false,
+  runningStartNodeId: null,
   executionPanelOpen: false,
   executionError: null,
   lastResult: null,
@@ -745,6 +748,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       selectedEdgeId: null,
       connectSourceId: null,
       loopDrawMode: false,
+      isRunning: false,
+      runningStartNodeId: null,
       executionPanelOpen: false,
       executionError: null,
       lastResult: null,
@@ -786,7 +791,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     };
   },
 
-  setRunning: (isRunning) => set({ isRunning }),
+  setRunning: (isRunning, startNodeId = null) =>
+    set({
+      isRunning,
+      runningStartNodeId: isRunning ? startNodeId ?? null : null,
+    }),
 
   setExecutionPanelOpen: (open) => set({ executionPanelOpen: open }),
 
@@ -833,6 +842,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       connectSourceId: null,
       loopDrawMode: false,
       isRunning: false,
+      runningStartNodeId: null,
       executionPanelOpen: false,
       executionError: null,
       lastResult: null,
@@ -874,6 +884,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       connectSourceId: null,
       loopDrawMode: false,
       isRunning: false,
+      runningStartNodeId: null,
       executionPanelOpen: false,
       executionError: null,
       lastResult: null,

@@ -63,7 +63,7 @@ export function useWorkflowExecution() {
       setExecutionError(null);
       clearExecutionProgress();
       setPendingApproval(null);
-      setRunning(true);
+      setRunning(true, startNodeId);
       setExecutionPanelOpen(true);
 
       const controller = new AbortController();

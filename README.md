@@ -103,6 +103,16 @@ pnpm dev:web
 
 Open [http://localhost:3000](http://localhost:3000) → **New Workflow** → edit nodes → **Run from Start Point**.
 
+### Models & providers
+
+On the **home page**, open **Keys**:
+
+- **Providers** — store OpenAI / Anthropic / Gemini API keys once for this machine (`apps/api/data/secrets.json`, gitignored). Keys apply to all workflows and are never written into workflow JSON or Open Space posts.
+- **Ollama** — list installed models, **Pull** new ones, **Delete** unused ones (requires Ollama running).
+- **Per-node override** — in an LLM (or loop checker) node inspector, you can save a different key for that node only, test the connection, or clear the override to fall back to the global key.
+
+LLM nodes pick a **provider + model**. Tools (web search) work with Ollama and OpenAI. Cursor is not supported (no public chat API for third-party apps).
+
 Browse and share workflows in **Open Space** (`/community`): publish a snapshot from the editor, or fork a community post into your private workflows. Published posts include prompts publicly; large Start Point attachments are stripped. Publish is lightly rate-limited per client IP.
 
 | Variable | Default | Purpose |
@@ -118,7 +128,7 @@ Browse and share workflows in **Open Space** (`/community`): publish a snapshot 
 |-------|------|
 | Frontend | Next.js, React Flow, Zustand, Tailwind |
 | Backend | FastAPI, httpx |
-| LLM | Ollama |
+| LLM | Ollama, OpenAI, Anthropic, Gemini |
 | Shared types | `packages/workflow-schema` |
 
 ## Repo layout
@@ -147,6 +157,11 @@ pnpm build:web      # Production build
 | `POST` | `/execute/stream` | Run workflow (SSE progress) |
 | `POST` | `/execute` | Run workflow (JSON) |
 | `GET` | `/models` | List Ollama models |
+| `GET` | `/models/catalog` | Providers + models catalog |
+| `GET/PUT` | `/settings/providers` | Cloud API key status / update |
+| `POST` | `/settings/providers/test` | Test a provider connection |
+| `POST` | `/ollama/pull` | Pull Ollama model (SSE) |
+| `DELETE` | `/ollama/models/{name}` | Delete Ollama model |
 | `GET/POST` | `/workflows` | List / save workflows |
 | `GET/DELETE` | `/workflows/{id}` | Get / delete workflow |
 | `GET` | `/community` | List community posts (`q`, `tag`, `sort`) |

@@ -1,11 +1,11 @@
-"""LLM agent loop that runs Ollama tool calls until a final answer."""
+"""LLM agent loop that runs provider tool calls until a final answer."""
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from typing import Any
 
-from app.services.ollama import OllamaService
+from app.services.llm.types import LLMClient
 from app.services.tools import resolve_tool_schemas, run_tool
 
 
@@ -24,7 +24,7 @@ def _summarize_tool_result(result: str, limit: int = 160) -> str:
 
 async def run_tool_loop(
     *,
-    ollama: OllamaService,
+    client: LLMClient,
     model: str,
     system_message: str | None,
     user_message: str,
@@ -35,9 +35,16 @@ async def run_tool_loop(
 ) -> AsyncIterator[dict[str, Any]]:
     """Yield SSE-friendly events; final event is tool_loop_completed with output."""
 
+    provider = getattr(client, "provider", "llm")
     tools = resolve_tool_schemas(enabled_tools)
+    if tools and not getattr(client, "supports_tools", False):
+        raise ValueError(
+            f"Tools are not supported for provider '{provider}'. "
+            "Disable tools on the LLM node or switch to Ollama/OpenAI."
+        )
+
     if not tools:
-        content = await ollama.chat(
+        content = await client.chat(
             model=model,
             user_message=user_message,
             system_message=system_message,
@@ -62,14 +69,14 @@ async def run_tool_loop(
             "type": "tool_round",
             "nodeId": node_id,
             "message": (
-                f"Calling Ollama ({model})"
+                f"Calling {provider} ({model})"
                 if round_index == 0
-                else f"Calling Ollama again ({model})"
+                else f"Calling {provider} again ({model})"
             ),
             "round": round_index + 1,
         }
 
-        result = await ollama.chat_messages(
+        result = await client.chat_messages(
             model=model,
             messages=messages,
             tools=tools,
@@ -80,7 +87,6 @@ async def run_tool_loop(
             "content": result.content or "",
         }
         if result.tool_calls:
-            # Prefer raw message when present so Ollama gets its own tool_call shape.
             if result.raw_message:
                 assistant_message = {
                     "role": "assistant",
@@ -157,14 +163,13 @@ async def run_tool_loop(
                 }
             )
 
-    # Exhausted rounds — ask for a final answer without tools.
     yield {
         "type": "tool_round",
         "nodeId": node_id,
         "message": f"Finalizing answer ({model})",
         "round": rounds + 1,
     }
-    final = await ollama.chat_messages(model=model, messages=messages, tools=None)
+    final = await client.chat_messages(model=model, messages=messages, tools=None)
     yield {
         "type": "tool_loop_completed",
         "nodeId": node_id,

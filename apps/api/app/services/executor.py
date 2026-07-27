@@ -17,6 +17,7 @@ from app.services.input_content import (
     get_upstream_source,
 )
 from app.services.loop_executor import LoopExecutor
+from app.services.llm.factory import get_llm_client
 from app.services.ollama import OllamaService
 from app.services.run_registry import run_registry
 from app.services.tool_loop import run_tool_loop
@@ -205,15 +206,17 @@ class DAGExecutor:
                         upstream_source.type if upstream_source else None,
                     )
                     model = node.data.model or "gemma4:e4b"
+                    provider = getattr(node.data, "provider", None) or "ollama"
                     images = collect_upstream_images(
                         node.id, workflow.nodes, workflow.edges, active_edges
                     )
                     enabled_tools = node.data.enabled_tools or []
 
                     try:
+                        client = get_llm_client(provider, node.id)
                         if enabled_tools:
                             async for event in run_tool_loop(
-                                ollama=self.ollama,
+                                client=client,
                                 model=model,
                                 system_message=node.data.system_prompt,
                                 user_message=user_prompt,
@@ -231,7 +234,7 @@ class DAGExecutor:
                                 }:
                                     yield event
                         else:
-                            output = await self.ollama.chat(
+                            output = await client.chat(
                                 model=model,
                                 user_message=user_prompt,
                                 system_message=node.data.system_prompt,

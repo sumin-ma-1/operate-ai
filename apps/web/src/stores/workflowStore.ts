@@ -229,6 +229,7 @@ function createDefaultNode(
         ...base,
         data: {
           label: "",
+          provider: "ollama",
           model: "gemma4:e4b",
           systemPrompt: "",
         },

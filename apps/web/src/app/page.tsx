@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { ModelsModal } from "@/components/editor/ModelsModal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { RotatingTagline } from "@/components/home/RotatingTagline";
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [starFlashKey, setStarFlashKey] = useState(0);
+  const [modelsOpen, setModelsOpen] = useState(false);
 
   const triggerStarFlash = () => {
     setStarFlashKey((key) => key + 1);
@@ -53,6 +55,14 @@ export default function HomePage() {
           aria-hidden="true"
         />
       )}
+      <Button
+        onClick={() => setModelsOpen(true)}
+        title="Keys"
+        aria-label="Keys"
+        className="fixed top-5 left-5 z-20 inline-flex !h-11 !w-11 items-center justify-center !rounded-full border-0 !bg-transparent !p-0 text-white/55 shadow-none transition duration-300 hover:!bg-white/10 hover:text-white hover:shadow-[0_0_22px_rgba(148,163,184,0.2)] hover:!opacity-100"
+      >
+        <span className="material-icons text-[22px] leading-none">key</span>
+      </Button>
       <main
         className={`relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-8 ${
           isEmpty ? "justify-center pb-8" : "pb-10 pt-8"
@@ -166,6 +176,8 @@ export default function HomePage() {
           </section>
         )}
       </main>
+
+      <ModelsModal open={modelsOpen} onClose={() => setModelsOpen(false)} />
     </div>
   );
 }

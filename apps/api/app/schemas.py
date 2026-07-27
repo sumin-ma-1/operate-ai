@@ -28,6 +28,7 @@ class WorkflowNodeData(BaseModel):
     value: Optional[str] = None
     attachments: Optional[list[WorkflowAttachment]] = None
     model: Optional[str] = "gemma4:e4b"
+    provider: Optional[Literal["ollama", "openai", "anthropic", "gemini"]] = "ollama"
     system_prompt: Optional[str] = Field(default=None, alias="systemPrompt")
     user_prompt_template: Optional[str] = Field(
         default="{{input}}", alias="userPromptTemplate"
@@ -36,6 +37,9 @@ class WorkflowNodeData(BaseModel):
     goal_prompt: Optional[str] = Field(default=None, alias="goalPrompt")
     max_iterations: Optional[int] = Field(default=5, alias="maxIterations")
     checker_model: Optional[str] = Field(default=None, alias="checkerModel")
+    checker_provider: Optional[
+        Literal["ollama", "openai", "anthropic", "gemini"]
+    ] = Field(default=None, alias="checkerProvider")
     approval_prompt: Optional[str] = Field(default=None, alias="approvalPrompt")
     enabled_tools: Optional[list[str]] = Field(default=None, alias="enabledTools")
     max_tool_rounds: Optional[int] = Field(default=5, alias="maxToolRounds")
@@ -173,5 +177,32 @@ class PublishCommunityRequest(BaseModel):
 
 class DeleteCommunityRequest(BaseModel):
     delete_token: str = Field(alias="deleteToken", min_length=1)
+
+    model_config = {"populate_by_name": True}
+
+
+class ProviderSettingsUpdate(BaseModel):
+    """Omit a provider to leave unchanged; empty string clears the key."""
+
+    openai: Optional[str] = None
+    anthropic: Optional[str] = None
+    gemini: Optional[str] = None
+
+
+class OllamaPullRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+class ProviderTestRequest(BaseModel):
+    provider: Literal["openai", "anthropic", "gemini"]
+    api_key: Optional[str] = Field(default=None, alias="apiKey")
+    node_id: Optional[str] = Field(default=None, alias="nodeId")
+
+    model_config = {"populate_by_name": True}
+
+
+class NodeProviderKeyUpdate(BaseModel):
+    provider: Literal["openai", "anthropic", "gemini"]
+    api_key: Optional[str] = Field(default=None, alias="apiKey")
 
     model_config = {"populate_by_name": True}

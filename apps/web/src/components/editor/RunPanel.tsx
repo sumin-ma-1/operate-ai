@@ -71,7 +71,8 @@ export function RunPanel() {
           node.id === firstNode?.id
             ? getExecutionMessage(
                 node.type,
-                nodes.find((item) => item.id === node.id)?.data.model
+                nodes.find((item) => item.id === node.id)?.data.model,
+                nodes.find((item) => item.id === node.id)?.data.provider
               )
             : undefined,
       }))
@@ -93,7 +94,10 @@ export function RunPanel() {
                   index === 0
                     ? getExecutionMessage(
                         node.nodeType,
-                        nodes.find((item) => item.id === node.nodeId)?.data.model
+                        nodes.find((item) => item.id === node.nodeId)?.data
+                          .model,
+                        nodes.find((item) => item.id === node.nodeId)?.data
+                          .provider
                       )
                     : undefined,
               }))

@@ -7,6 +7,7 @@ from app.services.input_content import (
     collect_upstream_images,
     get_upstream_source,
 )
+from app.services.llm.factory import get_llm_client
 from app.services.ollama import OllamaService
 from app.services.tool_loop import run_tool_loop
 
@@ -226,9 +227,11 @@ class LoopExecutor:
                     )
 
                     enabled_tools = inner_node.data.enabled_tools or []
+                    provider = getattr(inner_node.data, "provider", None) or "ollama"
+                    client = get_llm_client(provider, inner_node.id)
                     if enabled_tools:
                         async for event in run_tool_loop(
-                            ollama=self.ollama,
+                            client=client,
                             model=inner_node.data.model or default_model,
                             system_message=inner_node.data.system_prompt,
                             user_message=user_prompt,
@@ -250,7 +253,7 @@ class LoopExecutor:
                                     "iteration": iteration,
                                 }
                     else:
-                        output = await self.ollama.chat(
+                        output = await client.chat(
                             model=inner_node.data.model or default_model,
                             user_message=user_prompt,
                             system_message=inner_node.data.system_prompt,
@@ -292,7 +295,11 @@ class LoopExecutor:
                 )
                 break
 
-            checker_output = await self.ollama.chat(
+            checker_provider = (
+                getattr(loop_node.data, "checker_provider", None) or "ollama"
+            )
+            checker_client = get_llm_client(checker_provider, loop_node.id)
+            checker_output = await checker_client.chat(
                 model=checker_model,
                 user_message=(
                     f"Goal:\n{goal}\n\nCurrent output:\n{last_output}\n\n"

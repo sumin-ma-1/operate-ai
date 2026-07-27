@@ -25,11 +25,15 @@ export interface WorkflowNodeStyle {
   height?: number;
 }
 
+export type LLMProvider = "ollama" | "openai" | "anthropic" | "gemini";
+
 export interface WorkflowNodeData extends Record<string, unknown> {
   label: string;
   value?: string;
   attachments?: WorkflowAttachment[];
   model?: string;
+  /** LLM backend; defaults to ollama */
+  provider?: LLMProvider;
   systemPrompt?: string;
   userPromptTemplate?: string;
   result?: string;
@@ -39,6 +43,8 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   maxIterations?: number;
   /** Loop container: optional model for built-in checker */
   checkerModel?: string;
+  /** Loop container: provider for checker (default ollama) */
+  checkerProvider?: LLMProvider;
   /** Approval node: optional reviewer instructions shown while waiting */
   approvalPrompt?: string;
   /** LLM node: enabled tool names (e.g. web_search) */
@@ -124,6 +130,19 @@ export interface OllamaModel {
   name: string;
   size?: number;
   modified_at?: string;
+}
+
+export interface ModelCatalogProvider {
+  provider: LLMProvider;
+  label: string;
+  configured: boolean;
+  supportsTools: boolean;
+  models: string[];
+}
+
+export interface ProviderSecretStatus {
+  configured: boolean;
+  apiKeyMasked: string;
 }
 
 export interface WorkflowSummary {

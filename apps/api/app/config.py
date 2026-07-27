@@ -9,6 +9,7 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR = DATA_ROOT / "workflows"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+SECRETS_PATH = DATA_ROOT / "secrets.json"
 
 COMMUNITY_DB_PATH = DATA_ROOT / "community.sqlite3"
 COMMUNITY_PUBLISH_RATE_LIMIT = int(os.getenv("COMMUNITY_PUBLISH_RATE_LIMIT", "10"))

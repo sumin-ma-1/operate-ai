@@ -13,5 +13,6 @@ apps/api/data/workflows/*.json
 !apps/api/data/workflows/.gitkeep
 apps/api/data/community.sqlite3
 apps/api/data/community.sqlite3-*
+apps/api/data/secrets.json
 .DS_Store
 *.log

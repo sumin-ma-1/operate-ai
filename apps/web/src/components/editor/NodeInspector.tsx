@@ -19,13 +19,200 @@ import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { getNodeDisplayLabel, getNodeTypeLabel } from "@/lib/node-labels";
-import { fetchModels } from "@/lib/workflow-api";
-import type { WorkflowNodeType } from "@operate-ai/workflow-schema";
+import {
+  fetchModelCatalog,
+  fetchNodeProviderKeys,
+  testProviderConnection,
+  updateNodeProviderKey,
+} from "@/lib/workflow-api";
+import type {
+  LLMProvider,
+  ModelCatalogProvider,
+  WorkflowNodeType,
+} from "@operate-ai/workflow-schema";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 const PANEL_WIDTH = 288;
-const PANEL_HEIGHT = 340;
+const PANEL_HEIGHT = 420;
 const PANEL_GAP = 28;
+
+type CloudProviderId = "openai" | "anthropic" | "gemini";
+
+function isCloudProvider(provider: string): provider is CloudProviderId {
+  return (
+    provider === "openai" ||
+    provider === "anthropic" ||
+    provider === "gemini"
+  );
+}
+
+function NodeApiKeyOverride({
+  nodeId,
+  provider,
+}: {
+  nodeId: string;
+  provider: CloudProviderId;
+}) {
+  const [usingGlobal, setUsingGlobal] = useState(true);
+  const [masked, setMasked] = useState("");
+  const [draftKey, setDraftKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDraftKey("");
+    setStatus(null);
+    setError(null);
+    fetchNodeProviderKeys(nodeId)
+      .then((providers) => {
+        if (cancelled) return;
+        const entry = providers[provider];
+        setUsingGlobal(entry?.usingGlobal !== false);
+        setMasked(entry?.apiKeyMasked || "");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setUsingGlobal(true);
+        setMasked("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [nodeId, provider]);
+
+  const handleSave = async () => {
+    const value = draftKey.trim();
+    if (!value) {
+      setError("Enter a key to override the global one");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const providers = await updateNodeProviderKey({
+        nodeId,
+        provider,
+        apiKey: value,
+      });
+      const entry = providers[provider];
+      setUsingGlobal(entry?.usingGlobal !== false);
+      setMasked(entry?.apiKeyMasked || "");
+      setDraftKey("");
+      setStatus("Node override saved");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setBusy(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const providers = await updateNodeProviderKey({
+        nodeId,
+        provider,
+        apiKey: "",
+      });
+      const entry = providers[provider];
+      setUsingGlobal(entry?.usingGlobal !== false);
+      setMasked(entry?.apiKeyMasked || "");
+      setDraftKey("");
+      setStatus("Using global key");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clear failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setError(null);
+    setStatus(null);
+    try {
+      await testProviderConnection({
+        provider,
+        apiKey: draftKey.trim() || undefined,
+        nodeId,
+      });
+      setStatus("Connection OK");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Test failed");
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-xs text-white/70">API key</label>
+        <span className="text-[10px] uppercase tracking-wide text-white/40">
+          {usingGlobal ? "Global" : "Node override"}
+        </span>
+      </div>
+      {!usingGlobal && masked ? (
+        <p className="text-[11px] text-white/45">Saved: {masked}</p>
+      ) : (
+        <p className="text-[11px] text-white/45">
+          Uses the key from home → Keys unless you override here.
+        </p>
+      )}
+      <Input
+        type="password"
+        autoComplete="off"
+        className={fieldClass}
+        placeholder={usingGlobal ? "Override key…" : "Replace override…"}
+        value={draftKey}
+        onChange={(event) => setDraftKey(event.target.value)}
+      />
+      <div className="flex flex-wrap gap-1.5">
+        <Button
+          type="button"
+          variant="secondary"
+          className="!rounded-full !px-2.5 !py-1 !text-[11px]"
+          disabled={busy || !draftKey.trim()}
+          onClick={() => void handleSave()}
+        >
+          Save
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="!rounded-full !px-2.5 !py-1 !text-[11px]"
+          disabled={busy || testing}
+          onClick={() => void handleTest()}
+        >
+          {testing ? "Testing…" : "Test"}
+        </Button>
+        {!usingGlobal ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="!rounded-full !px-2.5 !py-1 !text-[11px] text-white/50"
+            disabled={busy}
+            onClick={() => void handleClear()}
+          >
+            Use global
+          </Button>
+        ) : null}
+      </div>
+      {status ? (
+        <p className="text-[11px] text-emerald-300/80">{status}</p>
+      ) : null}
+      {error ? (
+        <p className="text-[11px] text-amber-200/80">{error}</p>
+      ) : null}
+    </div>
+  );
+}
 
 const fieldClass =
   "w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/35 outline-none focus:ring-1 focus:ring-violet-400/50";
@@ -246,7 +433,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const removeNode = useWorkflowStore((state) => state.removeNode);
   const unwrapLoop = useWorkflowStore((state) => state.unwrapLoop);
-  const [models, setModels] = useState<string[]>(["gemma4:e4b"]);
+  const [catalog, setCatalog] = useState<ModelCatalogProvider[]>([]);
   const internalNode = useInternalNode(nodeId);
   const { flowToScreenPosition } = useReactFlow();
   const viewport = useViewport();
@@ -255,14 +442,18 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
   const selectedNode = nodes.find((node) => node.id === nodeId);
 
   useEffect(() => {
-    fetchModels()
-      .then((data) => {
-        if (data.length > 0) {
-          setModels(data.map((model) => model.name));
-        }
-      })
+    fetchModelCatalog()
+      .then((data) => setCatalog(data))
       .catch(() => {
-        setModels(["gemma4:e4b"]);
+        setCatalog([
+          {
+            provider: "ollama",
+            label: "Ollama",
+            configured: true,
+            supportsTools: true,
+            models: ["gemma4:e4b"],
+          },
+        ]);
       });
   }, []);
 
@@ -310,6 +501,25 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
     type != null
       ? getNodeDisplayLabel(data.label, type as WorkflowNodeType)
       : { text: data.label || "Node", isPlaceholder: false };
+
+  const llmProvider = (data.provider || "ollama") as LLMProvider;
+  const llmProviderEntry =
+    catalog.find((item) => item.provider === llmProvider) ||
+    catalog.find((item) => item.provider === "ollama");
+  const llmModels =
+    llmProviderEntry?.models?.length
+      ? llmProviderEntry.models
+      : ["gemma4:e4b"];
+
+  const checkerProvider = (data.checkerProvider ||
+    "ollama") as LLMProvider;
+  const checkerProviderEntry =
+    catalog.find((item) => item.provider === checkerProvider) ||
+    catalog.find((item) => item.provider === "ollama");
+  const checkerModels =
+    checkerProviderEntry?.models?.length
+      ? checkerProviderEntry.models
+      : ["gemma4:e4b"];
 
   return (
     <NodeToolbar
@@ -416,22 +626,71 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
             <>
               <div>
                 <label className="mb-1.5 block text-xs text-white/70">
+                  Provider
+                </label>
+                <Select
+                  className={fieldClass}
+                  value={llmProvider}
+                  onChange={(event) => {
+                    const provider = event.target.value as LLMProvider;
+                    const entry = catalog.find(
+                      (item) => item.provider === provider
+                    );
+                    const nextModel =
+                      entry?.models[0] ||
+                      (provider === "ollama" ? "gemma4:e4b" : "");
+                    updateNodeData(id, {
+                      provider,
+                      model: nextModel || data.model,
+                    });
+                  }}
+                >
+                  {(catalog.length
+                    ? catalog
+                    : [
+                        {
+                          provider: "ollama" as const,
+                          label: "Ollama",
+                          configured: true,
+                          supportsTools: true,
+                          models: [] as string[],
+                        },
+                      ]
+                  ).map((item) => (
+                    <option key={item.provider} value={item.provider}>
+                      {item.label}
+                      {!item.configured && item.provider !== "ollama"
+                        ? " (needs key)"
+                        : ""}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-white/70">
                   Model
                 </label>
                 <Select
                   className={fieldClass}
-                  value={data.model || "gemma4:e4b"}
+                  value={
+                    llmModels.includes(data.model || "")
+                      ? data.model
+                      : llmModels[0]
+                  }
                   onChange={(event) =>
                     updateNodeData(id, { model: event.target.value })
                   }
                 >
-                  {models.map((model) => (
+                  {llmModels.map((model) => (
                     <option key={model} value={model}>
                       {model}
                     </option>
                   ))}
                 </Select>
               </div>
+              {isCloudProvider(llmProvider) ? (
+                <NodeApiKeyOverride nodeId={id} provider={llmProvider} />
+              ) : null}
               <div>
                 <label className="mb-1.5 block text-xs text-white/70">
                   System Prompt
@@ -468,7 +727,7 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                   Web search
                 </button>
                 <p className="mt-1.5 text-[11px] text-white/35">
-                  Requires an Ollama model that supports tool calling
+                  Tools work with Ollama and OpenAI providers
                 </p>
               </div>
               {(data.enabledTools || []).length > 0 && (
@@ -532,16 +791,62 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs text-white/70">
+                  Checker provider
+                </label>
+                <Select
+                  className={fieldClass}
+                  value={checkerProvider}
+                  onChange={(event) => {
+                    const provider = event.target.value as LLMProvider;
+                    const entry = catalog.find(
+                      (item) => item.provider === provider
+                    );
+                    updateNodeData(id, {
+                      checkerProvider: provider,
+                      checkerModel:
+                        entry?.models[0] || data.checkerModel || "gemma4:e4b",
+                    });
+                  }}
+                >
+                  {(catalog.length
+                    ? catalog
+                    : [
+                        {
+                          provider: "ollama" as const,
+                          label: "Ollama",
+                          configured: true,
+                          supportsTools: true,
+                          models: [] as string[],
+                        },
+                      ]
+                  ).map((item) => (
+                    <option key={item.provider} value={item.provider}>
+                      {item.label}
+                      {!item.configured && item.provider !== "ollama"
+                        ? " (needs key)"
+                        : ""}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-white/70">
                   Checker model
                 </label>
                 <Select
                   className={fieldClass}
-                  value={data.checkerModel || data.model || "gemma4:e4b"}
+                  value={
+                    checkerModels.includes(
+                      data.checkerModel || data.model || ""
+                    )
+                      ? data.checkerModel || data.model
+                      : checkerModels[0]
+                  }
                   onChange={(event) =>
                     updateNodeData(id, { checkerModel: event.target.value })
                   }
                 >
-                  {models.map((model) => (
+                  {checkerModels.map((model) => (
                     <option key={model} value={model}>
                       {model}
                     </option>
@@ -551,6 +856,9 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
                   LLM used to decide when the goal is met
                 </p>
               </div>
+              {isCloudProvider(checkerProvider) ? (
+                <NodeApiKeyOverride nodeId={id} provider={checkerProvider} />
+              ) : null}
             </>
           )}
 

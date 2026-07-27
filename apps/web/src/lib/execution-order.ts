@@ -106,13 +106,15 @@ export function getExecutionOrder(
 
 export function getExecutionMessage(
   nodeType: WorkflowNodeType,
-  model?: string
+  model?: string,
+  provider?: string
 ): string {
   if (nodeType === "input") {
     return "Reading input and attachments";
   }
   if (nodeType === "llm") {
-    return `Calling Ollama (${model || "gemma4:e4b"})`;
+    const backend = provider || "ollama";
+    return `Calling ${backend} (${model || "gemma4:e4b"})`;
   }
   if (nodeType === "output") {
     return "Collecting final output";

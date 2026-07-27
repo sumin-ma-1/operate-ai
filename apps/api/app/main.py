@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+import json
 
 from app.config import (
     COMMUNITY_PUBLISH_RATE_LIMIT,
@@ -13,6 +14,10 @@ from app.schemas import (
     DeleteCommunityRequest,
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
+    OllamaPullRequest,
+    NodeProviderKeyUpdate,
+    ProviderSettingsUpdate,
+    ProviderTestRequest,
     PublishCommunityRequest,
     WorkflowDefinition,
     WorkflowSummary,
@@ -20,9 +25,11 @@ from app.schemas import (
 from app.services.community_sanitize import strip_large_attachments
 from app.services.community_store import CommunityStore
 from app.services.executor import DAGExecutor
+from app.services.llm.factory import build_model_catalog
 from app.services.ollama import OllamaService
 from app.services.rate_limit import SlidingWindowRateLimiter
 from app.services.run_registry import run_registry
+from app.services.secrets_store import secrets_store
 from app.services.workflow_store import WorkflowStore
 
 app = FastAPI(title="Operate-AI API", version="0.1.0")
@@ -76,6 +83,105 @@ async def list_models() -> dict:
         return {"models": models}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Ollama unavailable: {exc}") from exc
+
+
+@app.get("/models/catalog")
+async def models_catalog() -> dict:
+    catalog = await build_model_catalog(ollama_service)
+    return {"providers": catalog}
+
+
+@app.get("/settings/providers")
+async def get_provider_settings() -> dict:
+    return {"providers": secrets_store.public_view()}
+
+
+@app.put("/settings/providers")
+async def put_provider_settings(payload: ProviderSettingsUpdate) -> dict:
+    updates = payload.model_dump(exclude_unset=True)
+    view = secrets_store.update_keys(updates)
+    return {"providers": view}
+
+
+@app.post("/settings/providers/test")
+async def test_provider(payload: ProviderTestRequest) -> dict:
+    key = (payload.api_key or "").strip() or secrets_store.get_api_key(
+        payload.provider, payload.node_id
+    )
+    try:
+        if payload.provider == "openai":
+            from app.services.llm.openai_client import OpenAIClient
+
+            client = OpenAIClient(key)
+            models = await client.list_models()
+            await client.chat(
+                model=models[0] if models else "gpt-4o-mini",
+                user_message="Reply with OK",
+            )
+        elif payload.provider == "anthropic":
+            from app.services.llm.anthropic_client import AnthropicClient
+
+            client = AnthropicClient(key)
+            await client.chat(
+                model="claude-3-5-haiku-latest",
+                user_message="Reply with OK",
+            )
+        else:
+            from app.services.llm.gemini_client import GeminiClient
+
+            client = GeminiClient(key)
+            models = await client.list_models()
+            await client.chat(
+                model=models[0] if models else "gemini-2.0-flash",
+                user_message="Reply with OK",
+            )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True}
+
+
+@app.get("/settings/providers/nodes/{node_id}")
+async def get_node_provider_keys(node_id: str) -> dict:
+    return {"providers": secrets_store.get_node_override_view(node_id)}
+
+
+@app.put("/settings/providers/nodes/{node_id}")
+async def put_node_provider_key(
+    node_id: str, payload: NodeProviderKeyUpdate
+) -> dict:
+    view = secrets_store.set_node_override(
+        node_id, payload.provider, payload.api_key
+    )
+    return {"providers": view}
+
+
+@app.post("/ollama/pull")
+async def ollama_pull(payload: OllamaPullRequest) -> StreamingResponse:
+    async def event_generator():
+        try:
+            async for status in ollama_service.pull_model_stream(payload.name.strip()):
+                yield f"data: {json.dumps(status)}\n\n"
+            yield f"data: {json.dumps({'done': True, 'status': 'success'})}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'error': str(exc), 'done': True})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@app.delete("/ollama/models/{model_name:path}")
+async def ollama_delete_model(model_name: str) -> dict[str, bool]:
+    try:
+        await ollama_service.delete_model(model_name)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"deleted": True}
 
 
 @app.post("/execute/stream")

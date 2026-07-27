@@ -78,15 +78,18 @@ export default function HomePage() {
               onMouseEnter={triggerStarFlash}
               onFocus={triggerStarFlash}
             >
-              <Button className="!rounded-full border-0 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-6 py-2.5 shadow-[0_0_28px_rgba(59,130,246,0.55),0_0_48px_rgba(99,102,241,0.25)] transition duration-300 hover:shadow-[0_0_36px_rgba(59,130,246,0.75),0_0_64px_rgba(99,102,241,0.4)] hover:!opacity-100">
+              <Button className="inline-flex items-center gap-2 !rounded-full border-0 bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-6 py-2.5 shadow-[0_0_28px_rgba(59,130,246,0.55),0_0_48px_rgba(99,102,241,0.25)] transition duration-300 hover:shadow-[0_0_36px_rgba(59,130,246,0.75),0_0_64px_rgba(99,102,241,0.4)] hover:!opacity-100">
+                <span className="material-icons text-[20px] leading-none">
+                  draw
+                </span>
                 New Workflow
               </Button>
             </Link>
             <Link href="/community">
-              <Button
-                variant="secondary"
-                className="!rounded-full border-white/15 bg-slate-900/50 px-6 py-2.5 backdrop-blur-sm"
-              >
+              <Button className="inline-flex items-center gap-2 !rounded-full border-0 bg-gradient-to-r from-slate-500 via-teal-600 to-cyan-700 px-6 py-2.5 shadow-[0_0_24px_rgba(45,212,191,0.28),0_0_40px_rgba(8,145,178,0.18)] transition duration-300 hover:shadow-[0_0_32px_rgba(45,212,191,0.4),0_0_52px_rgba(8,145,178,0.28)] hover:!opacity-100">
+                <span className="material-icons text-[20px] leading-none">
+                  public
+                </span>
                 Open Space
               </Button>
             </Link>

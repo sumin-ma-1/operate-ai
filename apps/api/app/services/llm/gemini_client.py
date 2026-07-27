@@ -7,13 +7,6 @@ import httpx
 from app.services.llm.types import ChatResult
 
 
-DEFAULT_GEMINI_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-]
-
-
 class GeminiClient:
     provider = "gemini"
     supports_tools = False
@@ -34,7 +27,7 @@ class GeminiClient:
                     params={"key": self.api_key},
                 )
                 if response.is_error:
-                    return list(DEFAULT_GEMINI_MODELS)
+                    return []
                 data = response.json()
                 names: list[str] = []
                 for item in data.get("models") or []:
@@ -45,9 +38,9 @@ class GeminiClient:
                     short = name.split("/")[-1] if name else ""
                     if short:
                         names.append(short)
-                return names[:40] or list(DEFAULT_GEMINI_MODELS)
+                return names[:40]
         except Exception:
-            return list(DEFAULT_GEMINI_MODELS)
+            return []
 
     async def chat(
         self,

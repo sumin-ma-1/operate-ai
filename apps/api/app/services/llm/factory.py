@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.llm.anthropic_client import AnthropicClient, DEFAULT_ANTHROPIC_MODELS
-from app.services.llm.gemini_client import DEFAULT_GEMINI_MODELS, GeminiClient
+from app.services.llm.gemini_client import GeminiClient
 from app.services.llm.ollama_client import OllamaClient
-from app.services.llm.openai_client import DEFAULT_OPENAI_MODELS, OpenAIClient
+from app.services.llm.openai_client import OpenAIClient
 from app.services.secrets_store import secrets_store
 
 PROVIDERS = ("ollama", "openai", "anthropic", "gemini")
@@ -52,18 +52,19 @@ async def build_model_catalog(ollama: OllamaClient) -> list[dict[str, Any]]:
         try:
             openai_models = await OpenAIClient(openai_key).list_models()
         except Exception:
-            openai_models = list(DEFAULT_OPENAI_MODELS)
+            openai_models = []
     catalog.append(
         {
             "provider": "openai",
             "label": "OpenAI",
             "configured": bool(openai_key),
             "supportsTools": True,
-            "models": openai_models or list(DEFAULT_OPENAI_MODELS),
+            "models": openai_models,
         }
     )
 
     anthropic_key = secrets_store.get_api_key("anthropic")
+    # Anthropic has no public models list API — curated ids for the dropdown.
     catalog.append(
         {
             "provider": "anthropic",
@@ -75,12 +76,12 @@ async def build_model_catalog(ollama: OllamaClient) -> list[dict[str, Any]]:
     )
 
     gemini_key = secrets_store.get_api_key("gemini")
-    gemini_models: list[str] = list(DEFAULT_GEMINI_MODELS)
+    gemini_models: list[str] = []
     if gemini_key:
         try:
             gemini_models = await GeminiClient(gemini_key).list_models()
         except Exception:
-            gemini_models = list(DEFAULT_GEMINI_MODELS)
+            gemini_models = []
     catalog.append(
         {
             "provider": "gemini",

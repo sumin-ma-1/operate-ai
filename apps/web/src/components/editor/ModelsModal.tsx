@@ -284,7 +284,7 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
                           }))
                         }
                       />
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <div className="mt-2.5 flex flex-wrap gap-2">
                         <Button
                           type="button"
                           variant="secondary"
@@ -305,17 +305,19 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
                           </Button>
                         ) : null}
                       </div>
-                      {catalog
-                        .find((item) => item.provider === provider.id)
-                        ?.models.slice(0, 6)
-                        .map((model) => (
-                          <span
-                            key={model}
-                            className="mr-1 mt-2 inline-block rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-muted"
-                          >
-                            {model}
-                          </span>
-                        ))}
+                      {status?.configured
+                        ? catalog
+                            .find((item) => item.provider === provider.id)
+                            ?.models.slice(0, 6)
+                            .map((model) => (
+                              <span
+                                key={model}
+                                className="mr-1 mt-2 inline-block rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-muted"
+                              >
+                                {model}
+                              </span>
+                            ))
+                        : null}
                     </div>
                   );
                 })}

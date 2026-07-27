@@ -8,14 +8,6 @@ import httpx
 from app.services.llm.types import ChatResult, parse_openai_style_tool_calls
 
 
-DEFAULT_OPENAI_MODELS = [
-    "gpt-4o-mini",
-    "gpt-4o",
-    "gpt-4.1-mini",
-    "gpt-4.1",
-]
-
-
 class OpenAIClient:
     provider = "openai"
     supports_tools = True
@@ -40,7 +32,7 @@ class OpenAIClient:
                     headers=self._headers(),
                 )
                 if response.is_error:
-                    return list(DEFAULT_OPENAI_MODELS)
+                    return []
                 data = response.json()
                 names = [
                     item.get("id")
@@ -55,9 +47,9 @@ class OpenAIClient:
                         for token in ("gpt-4", "gpt-3.5", "o1", "o3", "o4")
                     )
                 ]
-                return sorted(chatish)[:40] or list(DEFAULT_OPENAI_MODELS)
+                return sorted(chatish)[:40]
         except Exception:
-            return list(DEFAULT_OPENAI_MODELS)
+            return []
 
     async def chat(
         self,

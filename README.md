@@ -109,15 +109,19 @@ On the **home page**, open **Keys**:
 
 - **Providers** — store OpenAI / Anthropic / Gemini API keys once for this machine (`apps/api/data/secrets.json`, gitignored). Keys apply to all workflows and are never written into workflow JSON or Open Space posts.
 - **Ollama** — list installed models, **Pull** new ones, **Delete** unused ones (requires Ollama running).
+- **Forge** — pick the default image checkpoint for `generate_image` (requires Forge with `--api`).
 - **Per-node override** — in an LLM (or loop checker) node inspector, you can save a different key for that node only, test the connection, or clear the override to fall back to the global key.
 
-LLM nodes pick a **provider + model**. Tools (web search) work with Ollama and OpenAI. Cursor is not supported (no public chat API for third-party apps).
+LLM nodes pick a **provider + model**. Tools (**web search**, **generate image**, **run Python**) work with Ollama and OpenAI. Cursor is not supported (no public chat API for third-party apps).
 
 Browse and share workflows in **Open Space** (`/community`): publish a snapshot from the editor, or fork a community post into your private workflows. Published posts include prompts publicly; large Start Point attachments are stripped. Publish is lightly rate-limited per client IP.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API |
+| `FORGE_BASE_URL` | `http://127.0.0.1:7860` | Stable Diffusion WebUI Forge (A1111 `--api`) for `generate_image` |
+| `FORGE_DEFAULT_CHECKPOINT` | _(empty)_ | Fallback checkpoint when none saved in Keys → Forge |
+| `PYTHON_TOOL_TIMEOUT_SECONDS` | `30` | Max runtime for `run_python` (capped at 120) |
 | `NEXT_PUBLIC_API_URL` | `/backend` | Web → FastAPI proxy (`:8000`) |
 | `COMMUNITY_PUBLISH_RATE_LIMIT` | `10` | Max community publishes per window |
 | `COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS` | `3600` | Rate-limit window (seconds) |
@@ -158,6 +162,8 @@ pnpm build:web      # Production build
 | `POST` | `/execute` | Run workflow (JSON) |
 | `GET` | `/models` | List Ollama models |
 | `GET` | `/models/catalog` | Providers + models catalog |
+| `GET` | `/forge/models` | List Forge checkpoints |
+| `GET/PUT` | `/settings/forge` | Default Forge checkpoint |
 | `GET/PUT` | `/settings/providers` | Cloud API key status / update |
 | `POST` | `/settings/providers/test` | Test a provider connection |
 | `POST` | `/ollama/pull` | Pull Ollama model (SSE) |

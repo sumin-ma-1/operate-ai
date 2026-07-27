@@ -20,11 +20,13 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { getNodeDisplayLabel, getNodeTypeLabel } from "@/lib/node-labels";
 import {
+  fetchForgeModels,
   fetchModelCatalog,
   fetchNodeProviderKeys,
   testProviderConnection,
   updateNodeProviderKey,
 } from "@/lib/workflow-api";
+import type { ForgeCheckpoint } from "@/lib/workflow-api";
 import type {
   LLMProvider,
   ModelCatalogProvider,
@@ -438,6 +440,9 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
   const removeNode = useWorkflowStore((state) => state.removeNode);
   const unwrapLoop = useWorkflowStore((state) => state.unwrapLoop);
   const [catalog, setCatalog] = useState<ModelCatalogProvider[]>([]);
+  const [forgeCheckpoints, setForgeCheckpoints] = useState<ForgeCheckpoint[]>(
+    []
+  );
   const [nodeKeyConfigured, setNodeKeyConfigured] = useState<
     Record<string, boolean>
   >({});
@@ -474,6 +479,9 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
           },
         ]);
       });
+    fetchForgeModels()
+      .then((data) => setForgeCheckpoints(data.checkpoints))
+      .catch(() => setForgeCheckpoints([]));
   }, []);
 
   useEffect(() => {
@@ -742,30 +750,76 @@ function SelectedNodePanel({ nodeId }: { nodeId: string }) {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs text-white/70">Tools</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const current = data.enabledTools || [];
-                    const next = current.includes("web_search")
-                      ? current.filter((tool) => tool !== "web_search")
-                      : [...current, "web_search"];
-                    updateNodeData(id, { enabledTools: next });
-                  }}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
-                    (data.enabledTools || []).includes("web_search")
-                      ? "border-sky-400/60 bg-sky-500/30 text-sky-100"
-                      : "border-white/15 bg-white/5 text-white/45 hover:border-white/25 hover:text-white/70"
-                  }`}
-                >
-                  <span className="material-icons text-[14px] leading-none">
-                    travel_explore
-                  </span>
-                  Web search
-                </button>
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ["web_search", "travel_explore", "Web search"],
+                      ["generate_image", "image", "Generate image"],
+                      ["run_python", "terminal", "Run Python"],
+                    ] as const
+                  ).map(([toolId, icon, label]) => {
+                    const enabled = (data.enabledTools || []).includes(toolId);
+                    return (
+                      <button
+                        key={toolId}
+                        type="button"
+                        onClick={() => {
+                          const current = data.enabledTools || [];
+                          const next = current.includes(toolId)
+                            ? current.filter((tool) => tool !== toolId)
+                            : [...current, toolId];
+                          updateNodeData(id, { enabledTools: next });
+                        }}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                          enabled
+                            ? "border-sky-400/60 bg-sky-500/30 text-sky-100"
+                            : "border-white/15 bg-white/5 text-white/45 hover:border-white/25 hover:text-white/70"
+                        }`}
+                      >
+                        <span className="material-icons text-[14px] leading-none">
+                          {icon}
+                        </span>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <p className="mt-1.5 text-[11px] text-white/35">
-                  Tools work with Ollama and OpenAI providers
+                  Tools work with Ollama and OpenAI. Image gen needs local Forge
+                  (--api).
                 </p>
               </div>
+              {(data.enabledTools || []).includes("generate_image") ? (
+                <div>
+                  <label className="mb-1.5 block text-xs text-white/70">
+                    Forge checkpoint
+                  </label>
+                  <Select
+                    className={fieldClass}
+                    value={
+                      typeof data.forgeCheckpoint === "string"
+                        ? data.forgeCheckpoint
+                        : ""
+                    }
+                    onChange={(event) =>
+                      updateNodeData(id, {
+                        forgeCheckpoint: event.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">Use global default</option>
+                    {forgeCheckpoints.map((item) => (
+                      <option key={item.title} value={item.title}>
+                        {item.title}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="mt-1.5 text-[11px] text-white/35">
+                    Override the default from home → Keys → Forge for this
+                    node only.
+                  </p>
+                </div>
+              ) : null}
               {(data.enabledTools || []).length > 0 && (
                 <div>
                   <label className="mb-1.5 block text-xs text-white/70">

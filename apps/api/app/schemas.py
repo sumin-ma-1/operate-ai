@@ -43,6 +43,7 @@ class WorkflowNodeData(BaseModel):
     approval_prompt: Optional[str] = Field(default=None, alias="approvalPrompt")
     enabled_tools: Optional[list[str]] = Field(default=None, alias="enabledTools")
     max_tool_rounds: Optional[int] = Field(default=5, alias="maxToolRounds")
+    forge_checkpoint: Optional[str] = Field(default=None, alias="forgeCheckpoint")
 
     model_config = {"populate_by_name": True}
 
@@ -204,5 +205,11 @@ class ProviderTestRequest(BaseModel):
 class NodeProviderKeyUpdate(BaseModel):
     provider: Literal["openai", "anthropic", "gemini"]
     api_key: Optional[str] = Field(default=None, alias="apiKey")
+
+    model_config = {"populate_by_name": True}
+
+
+class ForgeSettingsUpdate(BaseModel):
+    default_checkpoint: Optional[str] = Field(default=None, alias="defaultCheckpoint")
 
     model_config = {"populate_by_name": True}

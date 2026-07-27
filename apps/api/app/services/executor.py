@@ -120,6 +120,7 @@ class DAGExecutor:
         workflow = request.workflow
         node_results: list[NodeExecutionResult] = []
         node_outputs: dict[str, str] = {}
+        node_images: dict[str, list[str]] = {}
         original_input_text = ""
         final_output = ""
         run_id = run_registry.create_run(request.run_id or str(uuid.uuid4()))
@@ -208,7 +209,11 @@ class DAGExecutor:
                     model = node.data.model or "gemma4:e4b"
                     provider = getattr(node.data, "provider", None) or "ollama"
                     images = collect_upstream_images(
-                        node.id, workflow.nodes, workflow.edges, active_edges
+                        node.id,
+                        workflow.nodes,
+                        workflow.edges,
+                        active_edges,
+                        node_images,
                     )
                     enabled_tools = node.data.enabled_tools or []
 
@@ -224,9 +229,20 @@ class DAGExecutor:
                                 enabled_tools=enabled_tools,
                                 max_tool_rounds=node.data.max_tool_rounds,
                                 node_id=node.id,
+                                forge_checkpoint=node.data.forge_checkpoint,
                             ):
                                 if event["type"] == "tool_loop_completed":
-                                    output = event.get("output", "")
+                                    output = event.get("output", "") or ""
+                                    generated = event.get("images") or []
+                                    if generated:
+                                        node_images[node.id] = list(generated)
+                                        count = len(generated)
+                                        suffix = (
+                                            f"\n\n[{count} generated image"
+                                            f"{'' if count == 1 else 's'} attached]"
+                                        )
+                                        if suffix.strip() not in output:
+                                            output = (output + suffix).strip()
                                 elif event["type"] in {
                                     "tool_started",
                                     "tool_completed",
@@ -354,6 +370,8 @@ class DAGExecutor:
                 }
                 if iteration_logs is not None:
                     completed_event["iterationLogs"] = iteration_logs
+                if node.id in node_images:
+                    completed_event["images"] = node_images[node.id]
                 yield completed_event
 
             yield {

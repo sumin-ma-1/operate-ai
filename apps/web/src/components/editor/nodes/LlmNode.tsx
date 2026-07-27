@@ -12,6 +12,8 @@ type LlmNodeType = Node<WorkflowNodeData, "llm">;
 
 const TOOL_META: Record<string, { label: string; icon: string }> = {
   web_search: { label: "Web search", icon: "travel_explore" },
+  generate_image: { label: "Generate image", icon: "image" },
+  run_python: { label: "Run Python", icon: "terminal" },
 };
 
 const chipClass =

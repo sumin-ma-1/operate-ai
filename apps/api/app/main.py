@@ -19,12 +19,15 @@ from app.schemas import (
     ProviderSettingsUpdate,
     ProviderTestRequest,
     PublishCommunityRequest,
+    ForgeSettingsUpdate,
     WorkflowDefinition,
     WorkflowSummary,
 )
 from app.services.community_sanitize import strip_large_attachments
 from app.services.community_store import CommunityStore
 from app.services.executor import DAGExecutor
+from app.services.forge_service import get_active_checkpoint, list_checkpoints
+from app.services.forge_store import forge_store
 from app.services.llm.factory import build_model_catalog
 from app.services.ollama import OllamaService
 from app.services.rate_limit import SlidingWindowRateLimiter
@@ -153,6 +156,42 @@ async def put_node_provider_key(
         node_id, payload.provider, payload.api_key
     )
     return {"providers": view}
+
+
+@app.get("/forge/models")
+async def forge_models() -> dict:
+    try:
+        checkpoints = await list_checkpoints()
+        active = await get_active_checkpoint()
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {
+        "checkpoints": checkpoints,
+        "activeCheckpoint": active,
+        "defaultCheckpoint": forge_store.get_default_checkpoint(),
+    }
+
+
+@app.get("/settings/forge")
+async def get_forge_settings() -> dict:
+    try:
+        active = await get_active_checkpoint()
+    except ValueError:
+        active = ""
+    return {
+        "defaultCheckpoint": forge_store.get_default_checkpoint(),
+        "activeCheckpoint": active,
+    }
+
+
+@app.put("/settings/forge")
+async def put_forge_settings(payload: ForgeSettingsUpdate) -> dict:
+    view = forge_store.set_default_checkpoint(payload.default_checkpoint)
+    try:
+        active = await get_active_checkpoint()
+    except ValueError:
+        active = ""
+    return {**view, "activeCheckpoint": active}
 
 
 @app.post("/ollama/pull")

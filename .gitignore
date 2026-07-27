@@ -14,5 +14,6 @@ apps/api/data/workflows/*.json
 apps/api/data/community.sqlite3
 apps/api/data/community.sqlite3-*
 apps/api/data/secrets.json
+apps/api/data/forge_settings.json
 .DS_Store
 *.log

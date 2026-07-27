@@ -7,18 +7,22 @@ import { Input } from "@/components/ui/Input";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import {
   deleteOllamaModel,
+  fetchForgeModels,
+  fetchForgeSettings,
   fetchModelCatalog,
   fetchProviderSettings,
   pullOllamaModel,
   testProviderConnection,
+  updateForgeSettings,
   updateProviderSettings,
 } from "@/lib/workflow-api";
+import type { ForgeCheckpoint } from "@/lib/workflow-api";
 import type {
   ModelCatalogProvider,
   ProviderSecretStatus,
 } from "@operate-ai/workflow-schema";
 
-type TabId = "providers" | "ollama";
+type TabId = "providers" | "ollama" | "forge";
 
 type ModelsModalProps = {
   open: boolean;
@@ -48,6 +52,11 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
   const [pullName, setPullName] = useState("");
   const [pullStatus, setPullStatus] = useState("");
   const [pulling, setPulling] = useState(false);
+  const [forgeCheckpoints, setForgeCheckpoints] = useState<ForgeCheckpoint[]>(
+    []
+  );
+  const [forgeActive, setForgeActive] = useState("");
+  const [forgeDefault, setForgeDefault] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,12 +64,26 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     setLoading(true);
     setError(null);
     try {
-      const [nextCatalog, nextSecrets] = await Promise.all([
-        fetchModelCatalog(),
-        fetchProviderSettings(),
-      ]);
+      const [nextCatalog, nextSecrets, forgeData, forgeSettings] =
+        await Promise.all([
+          fetchModelCatalog(),
+          fetchProviderSettings(),
+          fetchForgeModels().catch(() => null),
+          fetchForgeSettings().catch(() => null),
+        ]);
       setCatalog(nextCatalog);
       setSecrets(nextSecrets);
+      if (forgeData) {
+        setForgeCheckpoints(forgeData.checkpoints);
+        setForgeActive(forgeData.activeCheckpoint);
+        setForgeDefault(
+          forgeSettings?.defaultCheckpoint || forgeData.defaultCheckpoint || ""
+        );
+      } else if (forgeSettings) {
+        setForgeDefault(forgeSettings.defaultCheckpoint);
+        setForgeActive(forgeSettings.activeCheckpoint);
+        setForgeCheckpoints([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load models");
     } finally {
@@ -166,6 +189,24 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     }
   };
 
+  const handleSaveForgeDefault = async () => {
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const next = await updateForgeSettings({
+        defaultCheckpoint: forgeDefault || "",
+      });
+      setForgeDefault(next.defaultCheckpoint);
+      setForgeActive(next.activeCheckpoint);
+      setMessage("Forge default checkpoint saved");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteOllama = async (name: string) => {
     if (!confirm(`Delete Ollama model "${name}"?`)) return;
     setError(null);
@@ -213,6 +254,7 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
               [
                 ["providers", "Providers"] as const,
                 ["ollama", "Ollama"] as const,
+                ["forge", "Forge"] as const,
               ]
             ).map(([id, label]) => (
               <button
@@ -383,6 +425,59 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
                     </ul>
                   )}
                 </div>
+              </div>
+            )}
+
+            {tab === "forge" && (
+              <div className="space-y-4">
+                <p className="text-xs text-muted">
+                  Default checkpoint for <strong>generate_image</strong> on all
+                  workflows. Per-node overrides are in the LLM inspector. Empty
+                  uses whatever is active in Forge UI. Env{" "}
+                  <code className="text-[11px]">FORGE_DEFAULT_CHECKPOINT</code>{" "}
+                  is a fallback when no default is saved here.
+                </p>
+                {forgeActive ? (
+                  <p className="text-xs text-muted">
+                    Active in Forge UI:{" "}
+                    <span className="text-foreground">{forgeActive}</span>
+                  </p>
+                ) : null}
+                {forgeCheckpoints.length === 0 ? (
+                  <p className="text-sm text-muted">
+                    No checkpoints from Forge. Is it running with{" "}
+                    <code className="text-[11px]">--api</code>?
+                  </p>
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-xs text-muted">
+                      Default checkpoint
+                    </label>
+                    <select
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                      value={forgeDefault}
+                      onChange={(event) => setForgeDefault(event.target.value)}
+                    >
+                      <option value="">Use Forge UI active model</option>
+                      {forgeCheckpoints.map((item) => (
+                        <option key={item.title} value={item.title}>
+                          {item.title}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        type="button"
+                        disabled={saving}
+                        className="inline-flex items-center gap-1.5 !rounded-full"
+                        onClick={() => void handleSaveForgeDefault()}
+                      >
+                        {saving ? <SpinnerIcon size={16} /> : null}
+                        Save default
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

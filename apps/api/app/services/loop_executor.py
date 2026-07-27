@@ -176,6 +176,7 @@ class LoopExecutor:
             }
 
             iteration_outputs: dict[str, str] = {}
+            iteration_images: dict[str, list[str]] = {}
             iteration_entries: list[dict[str, Any]] = []
 
             for inner_node in sorted_inner:
@@ -224,6 +225,7 @@ class LoopExecutor:
                         all_nodes,
                         all_edges,
                         _active_edges(all_edges),
+                        iteration_images,
                     )
 
                     enabled_tools = inner_node.data.enabled_tools or []
@@ -239,9 +241,20 @@ class LoopExecutor:
                             enabled_tools=enabled_tools,
                             max_tool_rounds=inner_node.data.max_tool_rounds,
                             node_id=inner_node.id,
+                            forge_checkpoint=inner_node.data.forge_checkpoint,
                         ):
                             if event["type"] == "tool_loop_completed":
-                                output = event.get("output", "")
+                                output = event.get("output", "") or ""
+                                generated = event.get("images") or []
+                                if generated:
+                                    iteration_images[inner_node.id] = list(generated)
+                                    count = len(generated)
+                                    suffix = (
+                                        f"\n\n[{count} generated image"
+                                        f"{'' if count == 1 else 's'} attached]"
+                                    )
+                                    if suffix.strip() not in output:
+                                        output = (output + suffix).strip()
                             elif event["type"] in {
                                 "tool_started",
                                 "tool_completed",

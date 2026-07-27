@@ -27,6 +27,7 @@ def collect_upstream_images(
     nodes: list[WorkflowNode],
     edges: list,
     active_edges: list,
+    runtime_images: dict[str, list[str]] | None = None,
 ) -> list[str]:
     node_map = {node.id: node for node in nodes}
 
@@ -46,7 +47,11 @@ def collect_upstream_images(
             ]
 
         if source.type in {"llm", "approval", "loop"}:
-            return collect_upstream_images(source.id, nodes, edges, active_edges)
+            if runtime_images and source.id in runtime_images:
+                return list(runtime_images[source.id])
+            return collect_upstream_images(
+                source.id, nodes, edges, active_edges, runtime_images
+            )
 
     return []
 

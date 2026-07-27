@@ -47,10 +47,12 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   checkerProvider?: LLMProvider;
   /** Approval node: optional reviewer instructions shown while waiting */
   approvalPrompt?: string;
-  /** LLM node: enabled tool names (e.g. web_search) */
+  /** LLM node: enabled tool names (e.g. web_search, generate_image, run_python) */
   enabledTools?: string[];
   /** LLM node: max tool-call rounds per run (default 5) */
   maxToolRounds?: number;
+  /** LLM node: Forge checkpoint override for generate_image */
+  forgeCheckpoint?: string;
 }
 
 export interface WorkflowNode {

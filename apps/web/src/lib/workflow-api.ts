@@ -122,6 +122,7 @@ export type ExecutionStreamEvent =
       nodeId: string;
       nodeType: WorkflowNodeType;
       output: string;
+      images?: string[];
       loopId?: string;
       iteration?: number;
       iterationLogs?: LoopIterationLog[];
@@ -155,6 +156,7 @@ export type ExecutionStreamEvent =
       toolName: string;
       summary?: string;
       message: string;
+      hasImage?: boolean;
       loopId?: string;
       iteration?: number;
     }
@@ -339,6 +341,37 @@ export async function updateProviderSettings(payload: {
     body: JSON.stringify(payload),
   });
   return data.providers;
+}
+
+export interface ForgeCheckpoint {
+  title: string;
+  modelName: string;
+}
+
+export interface ForgeModelsResponse {
+  checkpoints: ForgeCheckpoint[];
+  activeCheckpoint: string;
+  defaultCheckpoint: string;
+}
+
+export async function fetchForgeModels(): Promise<ForgeModelsResponse> {
+  return request<ForgeModelsResponse>("/forge/models");
+}
+
+export async function fetchForgeSettings(): Promise<{
+  defaultCheckpoint: string;
+  activeCheckpoint: string;
+}> {
+  return request("/settings/forge");
+}
+
+export async function updateForgeSettings(payload: {
+  defaultCheckpoint?: string;
+}): Promise<{ defaultCheckpoint: string; activeCheckpoint: string }> {
+  return request("/settings/forge", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function testProviderConnection(payload: {

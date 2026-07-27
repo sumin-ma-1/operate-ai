@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
+import { Toast } from "@/components/ui/Toast";
 import {
   deleteOllamaModel,
   fetchForgeModels,
@@ -59,6 +60,24 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
   const [forgeDefault, setForgeDefault] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
+
+  const clearToast = useCallback(() => setToast(null), []);
+
+  const showSavedToast = useCallback(
+    (message: string) => {
+      setToast({ message, variant: "success" });
+      onClose();
+    },
+    [onClose]
+  );
+
+  const showErrorToast = useCallback((message: string) => {
+    setToast({ message, variant: "error" });
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -96,8 +115,6 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     void refresh();
   }, [open, refresh]);
 
-  if (!open) return null;
-
   const ollamaEntry = catalog.find((item) => item.provider === "ollama");
 
   const handleSaveKeys = async (event: FormEvent) => {
@@ -120,10 +137,12 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
       const next = await updateProviderSettings(payload);
       setSecrets(next);
       setDraftKeys({ openai: "", anthropic: "", gemini: "" });
-      setMessage("API keys saved locally on this machine");
+      showSavedToast("API keys saved");
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const text = err instanceof Error ? err.message : "Save failed";
+      setError(text);
+      showErrorToast(text);
     } finally {
       setSaving(false);
     }
@@ -135,10 +154,12 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     try {
       const next = await updateProviderSettings({ [provider]: "" });
       setSecrets(next);
-      setMessage(`${provider} key cleared`);
+      showSavedToast(`${provider} key cleared`);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Clear failed");
+      const text = err instanceof Error ? err.message : "Clear failed";
+      setError(text);
+      showErrorToast(text);
     } finally {
       setSaving(false);
     }
@@ -178,11 +199,13 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
           setPullStatus(String(status.error));
         }
       });
-      setMessage(`Pulled ${name}`);
+      showSavedToast(`Pulled ${name}`);
       setPullName("");
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Pull failed");
+      const text = err instanceof Error ? err.message : "Pull failed";
+      setError(text);
+      showErrorToast(text);
     } finally {
       setPulling(false);
       setPullStatus("");
@@ -199,9 +222,11 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
       });
       setForgeDefault(next.defaultCheckpoint);
       setForgeActive(next.activeCheckpoint);
-      setMessage("Forge default checkpoint saved");
+      showSavedToast("Forge default checkpoint saved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const text = err instanceof Error ? err.message : "Save failed";
+      setError(text);
+      showErrorToast(text);
     } finally {
       setSaving(false);
     }
@@ -212,14 +237,18 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     setError(null);
     try {
       await deleteOllamaModel(name);
-      setMessage(`Deleted ${name}`);
+      showSavedToast(`Deleted ${name}`);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      const text = err instanceof Error ? err.message : "Delete failed";
+      setError(text);
+      showErrorToast(text);
     }
   };
 
   return (
+    <>
+    {open ? (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       role="dialog"
@@ -484,5 +513,15 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
         </div>
       </div>
     </div>
+    ) : null}
+    {toast ? (
+      <Toast
+        message={toast.message}
+        variant={toast.variant}
+        placement="center"
+        onClose={clearToast}
+      />
+    ) : null}
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 interface ToastProps {
   message: string;
   variant?: "success" | "error";
+  placement?: "top" | "center";
   durationMs?: number;
   onClose: () => void;
 }
@@ -13,6 +14,7 @@ interface ToastProps {
 export function Toast({
   message,
   variant = "success",
+  placement = "top",
   durationMs = 2200,
   onClose,
 }: ToastProps) {
@@ -41,11 +43,23 @@ export function Toast({
 
   const icon = variant === "error" ? "error" : "check_circle";
 
+  const positionClass =
+    placement === "center"
+      ? "fixed inset-0 z-[100] flex items-center justify-center"
+      : "fixed left-1/2 top-[4.75rem] z-[100] -translate-x-1/2";
+
+  const motionClass =
+    placement === "center"
+      ? visible
+        ? "scale-100 opacity-100"
+        : "scale-95 opacity-0"
+      : visible
+        ? "translate-y-0 opacity-100"
+        : "-translate-y-2 opacity-0";
+
   return createPortal(
     <div
-      className={`pointer-events-none fixed left-1/2 top-[4.75rem] z-[100] -translate-x-1/2 transition duration-200 ${
-        visible ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
-      }`}
+      className={`pointer-events-none transition duration-200 ${positionClass} ${motionClass}`}
       role="status"
       aria-live="polite"
     >

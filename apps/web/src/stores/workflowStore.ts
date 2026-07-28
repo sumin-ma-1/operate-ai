@@ -319,9 +319,30 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
       const nextNodes = applyNodeChanges(expandedChanges, state.nodes).map(
         (node) => {
-          if (node.extent == null) return node;
-          const { extent: _extent, ...rest } = node;
-          return rest;
+          let next = node;
+          if (node.extent != null) {
+            const { extent: _extent, ...rest } = node;
+            next = rest;
+          }
+          // NodeResizer writes width/height; keep style in sync for save + hit tests.
+          if (
+            next.type === "loop" &&
+            (typeof next.width === "number" || typeof next.height === "number")
+          ) {
+            next = {
+              ...next,
+              style: {
+                ...next.style,
+                ...(typeof next.width === "number"
+                  ? { width: next.width }
+                  : {}),
+                ...(typeof next.height === "number"
+                  ? { height: next.height }
+                  : {}),
+              },
+            };
+          }
+          return next;
         }
       );
 
@@ -766,9 +787,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       name: state.workflowName,
       nodes: state.nodes.map((node) => {
         const width =
-          typeof node.style?.width === "number" ? node.style.width : undefined;
+          (typeof node.width === "number" ? node.width : undefined) ??
+          (typeof node.style?.width === "number" ? node.style.width : undefined);
         const height =
-          typeof node.style?.height === "number" ? node.style.height : undefined;
+          (typeof node.height === "number" ? node.height : undefined) ??
+          (typeof node.style?.height === "number"
+            ? node.style.height
+            : undefined);
 
         return {
           id: node.id,

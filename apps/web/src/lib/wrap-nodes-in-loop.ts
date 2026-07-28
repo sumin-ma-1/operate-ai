@@ -18,15 +18,27 @@ export const DEFAULT_NODE_HEIGHT = 96;
 const MIN_LOOP_WIDTH = 280;
 const MIN_LOOP_HEIGHT = 160;
 
+function styleDimension(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+/** Prefer live React Flow size (resize updates width/measured, not always style). */
 export function getNodeDimensions(node: WorkflowNode) {
   const width =
-    typeof node.style?.width === "number"
-      ? node.style.width
-      : node.parentId
-        ? INNER_LLM_WIDTH
-        : OUTER_LLM_WIDTH;
+    node.measured?.width ??
+    node.width ??
+    styleDimension(node.style?.width) ??
+    (node.parentId ? INNER_LLM_WIDTH : OUTER_LLM_WIDTH);
   const height =
-    typeof node.style?.height === "number" ? node.style.height : DEFAULT_NODE_HEIGHT;
+    node.measured?.height ??
+    node.height ??
+    styleDimension(node.style?.height) ??
+    DEFAULT_NODE_HEIGHT;
 
   return { width, height };
 }

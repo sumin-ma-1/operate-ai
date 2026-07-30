@@ -18,7 +18,7 @@ export function OpenSpaceShell({
   return (
     <div className="space-backdrop flex min-h-screen flex-col">
       <header className="relative z-20 border-b border-white/10 bg-slate-950/40 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-6 sm:px-8">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-6 sm:px-8">
           <Link
             href="/"
             className="flex items-center gap-2 text-foreground transition hover:opacity-90"
@@ -60,7 +60,7 @@ export function OpenSpaceShell({
       <div className="relative z-10 flex flex-1 flex-col">{children}</div>
 
       <footer className="relative z-20 border-t border-white/10 bg-slate-950/30">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <div>
             <p className="text-sm font-medium text-foreground/90">
               Open Space · Operate AI
@@ -74,9 +74,12 @@ export function OpenSpaceShell({
             href={editorRepoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-muted underline-offset-2 transition hover:text-foreground hover:underline"
+            className="inline-flex items-center gap-1 text-xs text-muted underline-offset-2 transition hover:text-foreground hover:underline"
           >
-            Get Operate AI on GitHub →
+            Get Operate AI on GitHub
+            <span className="material-icons text-[14px] leading-none">
+              arrow_forward
+            </span>
           </a>
         </div>
       </footer>

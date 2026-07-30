@@ -65,8 +65,15 @@ export default function CommunityPage() {
     );
   }
 
+  const sortChip = (active: boolean) =>
+    `!h-8 !rounded-full !px-3.5 !py-0 text-xs font-medium leading-none transition ${
+      active
+        ? "!border !border-sky-400/50 !bg-sky-500/15 !text-sky-100 hover:!opacity-100"
+        : "!border !border-white/10 !bg-transparent !text-muted hover:!border-white/20 hover:!bg-white/5 hover:!text-foreground"
+    }`;
+
   const gallery = (
-    <main className="relative z-10 mx-auto max-w-6xl px-8 pb-12 pt-8">
+    <main className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-8 sm:px-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           {!usePublicShell && isLocalEditorHost() ? (
@@ -87,7 +94,7 @@ export default function CommunityPage() {
           >
             Gallery
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-muted">
+          <p className="mt-1 max-w-2xl text-sm text-muted">
             Browse community workflows. Open as new for a private copy in your
             local editor, or Star to paste into an editor you already have open.
             Publishing shares prompts publicly.
@@ -96,24 +103,34 @@ export default function CommunityPage() {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Input
-          className="sm:max-w-md"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search title, author, tags…"
-          aria-label="Search community posts"
-        />
-        <div className="flex gap-2">
+        <div className="relative w-full sm:max-w-md">
+          <span
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted"
+            aria-hidden="true"
+          >
+            <span className="material-icons block translate-y-px text-[18px] leading-none">
+              search
+            </span>
+          </span>
+          <Input
+            className="!rounded-full border-white/10 bg-slate-900/40 !py-2 pl-10 pr-4"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search title, author, tags…"
+            aria-label="Search community posts"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
           <Button
-            variant={sort === "newest" ? "primary" : "secondary"}
-            className="!rounded-full px-4"
+            variant="ghost"
+            className={sortChip(sort === "newest")}
             onClick={() => setSort("newest")}
           >
             Newest
           </Button>
           <Button
-            variant={sort === "forks" ? "primary" : "secondary"}
-            className="!rounded-full px-4"
+            variant="ghost"
+            className={sortChip(sort === "forks")}
             onClick={() => setSort("forks")}
           >
             Most forked

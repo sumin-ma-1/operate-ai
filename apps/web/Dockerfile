@@ -33,6 +33,7 @@ ENV NODE_ENV=production
 RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
 
 COPY --from=builder /repo/apps/web/public ./public
+COPY --from=builder /repo/apps/web/public ./apps/web/public
 COPY --from=builder /repo/apps/web/.next/standalone ./
 COPY --from=builder /repo/apps/web/.next/static ./apps/web/.next/static
 

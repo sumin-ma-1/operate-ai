@@ -3,13 +3,11 @@ import "./globals.css";
 import { GoogleOAuthProviderWrapper } from "@/components/providers/GoogleOAuthProviderWrapper";
 
 export const metadata: Metadata = {
-  title: "Operate AI",
-  description: "AI Agent and LLM workflow visual editor",
-  icons: {
-    icon: "/retro_spaceship_thruster.gif",
-    shortcut: "/retro_spaceship_thruster.gif",
-    apple: "/retro_spaceship_thruster.gif",
+  title: {
+    default: "Operate AI",
+    template: "%s - Operate AI",
   },
+  description: "AI Agent and LLM workflow visual editor",
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { GitHubIcon } from "@/components/icons/GitHubIcon";
 import { getEditorRepoUrl } from "@/lib/open-space-url";
 
 interface OpenSpaceShellProps {
@@ -49,8 +50,9 @@ export function OpenSpaceShell({
               href={editorRepoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-1 inline-flex items-center rounded-full border-0 bg-gradient-to-r from-sky-600 via-indigo-600 to-indigo-700 px-3.5 py-1.5 text-sm font-medium text-white shadow-[0_0_18px_rgba(99,102,241,0.25)] transition duration-300 hover:shadow-[0_0_24px_rgba(99,102,241,0.4)] hover:opacity-95"
+              className="ml-1 inline-flex items-center gap-1.5 rounded-full border-0 bg-gradient-to-r from-sky-600 via-indigo-600 to-indigo-700 px-3.5 py-1.5 text-sm font-medium text-white shadow-[0_0_18px_rgba(99,102,241,0.25)] transition duration-300 hover:shadow-[0_0_24px_rgba(99,102,241,0.4)] hover:opacity-95"
             >
+              <GitHubIcon className="text-[15px]" />
               Get the editor
             </a>
           </nav>
@@ -74,8 +76,9 @@ export function OpenSpaceShell({
             href={editorRepoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted underline-offset-2 transition hover:text-foreground hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs text-muted underline-offset-2 transition hover:text-foreground hover:underline"
           >
+            <GitHubIcon className="text-[13px]" />
             Get Operate AI on GitHub
             <span className="material-icons text-[14px] leading-none">
               arrow_forward

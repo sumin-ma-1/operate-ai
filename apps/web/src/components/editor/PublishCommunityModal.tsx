@@ -175,7 +175,7 @@ export function PublishCommunityModal({
               </p>
               <div className="mt-3">
                 <GoogleLogin
-                  onSuccess={(credentialResponse: any) => {
+                  onSuccess={(credentialResponse) => {
                     if (credentialResponse.credential) {
                       setGoogleIdToken(credentialResponse.credential);
                     }
@@ -185,7 +185,7 @@ export function PublishCommunityModal({
                   theme="filled_blue"
                   shape="pill"
                   size="large"
-                  text="sign_in_with_google"
+                  text="signin_with"
                 />
               </div>
             </>

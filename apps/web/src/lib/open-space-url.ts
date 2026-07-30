@@ -20,6 +20,33 @@ export function getLocalEditorBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+/**
+ * Probe whether the local editor responds. Uses `no-cors` so a public HTTPS
+ * Open Space page can check `http://localhost` without CORS headers.
+ * Connection refused / timeout → false.
+ */
+export async function isLocalEditorReachable(
+  baseUrl = getLocalEditorBaseUrl(),
+  timeoutMs = 2200
+): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await fetch(`${baseUrl.replace(/\/$/, "")}/`, {
+      method: "GET",
+      mode: "no-cors",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 /** Repo URL for “Get the editor” (clone / install instructions). */
 export function getEditorRepoUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_EDITOR_REPO_URL || "").trim();

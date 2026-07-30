@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { GoogleLogin } from "@react-oauth/google";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { GoogleSignInTrigger } from "@/components/auth/GoogleSignInTrigger";
 import { OpenSpaceShell } from "@/components/open-space/OpenSpaceShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -20,6 +20,7 @@ import {
   getLocalEditorBaseUrl,
   getPublicOpenSpaceHref,
   isLocalEditorHost,
+  isLocalEditorReachable,
   isPublicOpenSpaceSite,
 } from "@/lib/open-space-url";
 import {
@@ -48,12 +49,15 @@ export default function CommunityDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteToken, setDeleteToken] = useState<string | null>(null);
   const [starred, setStarred] = useState(false);
+  const googleSignInRef = useRef<(() => void) | null>(null);
   const googleIdToken = useAuthStore((s) => s.googleIdToken);
   const setGoogleIdToken = useAuthStore((s) => s.setGoogleIdToken);
   const clearGoogleIdToken = useAuthStore((s) => s.clearGoogleIdToken);
   const [toast, setToast] = useState<{
     message: string;
     variant: "success" | "error";
+    durationMs?: number;
+    actions?: Array<{ label: string; onClick: () => void; danger?: boolean }>;
   } | null>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
@@ -94,6 +98,90 @@ export default function CommunityDetailPage() {
     return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [post]);
 
+  const galleryHref = usePublicShell ? "/open-space" : "/community";
+
+  const performDelete = useCallback(async () => {
+    if (!googleIdToken) return;
+    setToast(null);
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteCommunityPost(postId, {
+        deleteToken: deleteToken ?? undefined,
+        authToken: googleIdToken,
+      });
+      removeCommunityDeleteToken(postId);
+      setToast({
+        message: "Post deleted",
+        variant: "success",
+        durationMs: 1600,
+      });
+      window.setTimeout(() => {
+        router.push(galleryHref);
+      }, 900);
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Delete failed";
+      const denied =
+        /not authorized|forbidden|invalid delete token|403/i.test(raw);
+      setToast({
+        message: denied
+          ? "Delete denied - you are not allowed to remove this post"
+          : raw,
+        variant: "error",
+        durationMs: 3200,
+      });
+      setDeleting(false);
+    }
+  }, [deleteToken, galleryHref, googleIdToken, postId, router]);
+
+  const handleDelete = () => {
+    if (!googleIdToken || deleting) return;
+    setToast({
+      message: "Delete this post?",
+      variant: "error",
+      durationMs: 0,
+      actions: [
+        {
+          label: "Cancel",
+          onClick: () => setToast(null),
+        },
+        {
+          label: "Delete",
+          danger: true,
+          onClick: () => {
+            void performDelete();
+          },
+        },
+      ],
+    });
+  };
+
+  const handleSignOut = () => {
+    setToast({
+      message: "Sign out of Google?",
+      variant: "error",
+      durationMs: 0,
+      actions: [
+        {
+          label: "Cancel",
+          onClick: () => setToast(null),
+        },
+        {
+          label: "Sign out",
+          danger: true,
+          onClick: () => {
+            clearGoogleIdToken();
+            setToast({
+              message: "Signed out",
+              variant: "success",
+              durationMs: 1800,
+            });
+          },
+        },
+      ],
+    });
+  };
+
   if (bounceToPublic) {
     return (
       <p className="p-8 text-center text-sm text-muted">
@@ -106,18 +194,39 @@ export default function CommunityDetailPage() {
     setForking(true);
     setError(null);
     const localEditorBase = getLocalEditorBaseUrl();
+    const reachable = await isLocalEditorReachable(localEditorBase);
+    if (!reachable) {
+      setForking(false);
+      setToast({
+        message:
+          "Local editor is not running. Start Operate AI (localhost:3000), then try again.",
+        variant: "error",
+        durationMs: 4200,
+      });
+      return;
+    }
     const target = `${localEditorBase}/editor/import?postId=${encodeURIComponent(
       postId
     )}`;
     window.location.assign(target);
   };
 
-  const handleToggleStar = () => {
+  const handleToggleStar = async () => {
     if (!post) return;
 
     // Public Open Space → hand off to local editor (same idea as Open as new).
     if (usePublicShell) {
       const localEditorBase = getLocalEditorBaseUrl();
+      const reachable = await isLocalEditorReachable(localEditorBase);
+      if (!reachable) {
+        setToast({
+          message:
+            "Local editor is not running. Start Operate AI (localhost:3000), then try again.",
+          variant: "error",
+          durationMs: 4200,
+        });
+        return;
+      }
       window.location.assign(
         `${localEditorBase}/editor/star?postId=${encodeURIComponent(postId)}`
       );
@@ -142,26 +251,6 @@ export default function CommunityDetailPage() {
       message: "Starred ! Use Add (+) → Starred in the editor",
       variant: "success",
     });
-  };
-
-  const galleryHref = usePublicShell ? "/open-space" : "/community";
-
-  const handleDelete = async () => {
-    if (!googleIdToken) return;
-    if (!confirm("Delete this community post?")) return;
-    setDeleting(true);
-    setError(null);
-    try {
-      await deleteCommunityPost(postId, {
-        deleteToken: deleteToken ?? undefined,
-        authToken: googleIdToken,
-      });
-      removeCommunityDeleteToken(postId);
-      router.push(galleryHref);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
-      setDeleting(false);
-    }
   };
 
   const detail = (
@@ -260,56 +349,61 @@ export default function CommunityDetailPage() {
               {usePublicShell ? "Star in editor" : starred ? "Unstar" : "Star"}
             </Button>
           </div>
-
-          <div className="mt-8 border-t border-white/10 pt-5">
-            <p className="text-xs text-muted">
-              Posted this? Sign in with Google to delete it. Open as new and Star
-              do not require sign-in.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              {googleIdToken ? (
-                <>
-                  <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
-                    <span className="material-icons text-[14px] leading-none text-emerald-300/90">
-                      check_circle
-                    </span>
-                    <span>Signed in with Google</span>
-                    <button
-                      type="button"
-                      className="ml-0.5 text-emerald-200/70 underline-offset-2 transition hover:text-emerald-100 hover:underline"
-                      onClick={() => clearGoogleIdToken()}
-                    >
-                      sign out
-                    </button>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    disabled={deleting}
-                    className="!rounded-full text-red-300/70 hover:text-red-300"
-                    onClick={handleDelete}
-                  >
-                    {deleting ? "Deleting…" : "Delete post"}
-                  </Button>
-                </>
-              ) : (
-                <GoogleLogin
-                  onSuccess={(credentialResponse: any) => {
-                    if (credentialResponse.credential) {
-                      setGoogleIdToken(credentialResponse.credential);
-                    }
-                  }}
-                  onError={() => setError("Google sign-in failed")}
-                  useOneTap={false}
-                  theme="filled_blue"
-                  shape="pill"
-                  size="medium"
-                  text="Sign in with Google"
-                />
-              )}
-            </div>
-          </div>
         </Card>
       )}
+
+      {post ? (
+        <div className="mt-4">
+          {googleIdToken ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
+                <span className="material-icons text-[14px] leading-none text-emerald-300/90">
+                  check_circle
+                </span>
+                <span>Signed in with Google</span>
+                <button
+                  type="button"
+                  className="ml-0.5 text-emerald-200/70 underline-offset-2 transition hover:text-emerald-100 hover:underline"
+                  onClick={handleSignOut}
+                >
+                  sign out
+                </button>
+              </div>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDelete}
+                className="inline-flex w-fit items-center gap-1.5 rounded-full border border-red-400/25 bg-red-500/10 px-3 py-1.5 text-xs text-red-200 transition hover:border-red-400/40 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="material-icons text-[14px] leading-none text-red-300/90">
+                  delete
+                </span>
+                <span>{deleting ? "Deleting…" : "Delete post"}</span>
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted">
+              Posted this?{" "}
+              <button
+                type="button"
+                className="text-sky-300/90 underline underline-offset-2 transition hover:text-sky-200"
+                onClick={() => googleSignInRef.current?.()}
+              >
+                Sign in with Google to delete it.
+              </button>{" "}
+              Open as new and Star do not require sign-in.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {!googleIdToken ? (
+        <GoogleSignInTrigger
+          triggerRef={googleSignInRef}
+          onCredential={(token) => setGoogleIdToken(token)}
+          onError={() => setError("Google sign-in failed")}
+        />
+      ) : null}
     </main>
   );
 
@@ -317,6 +411,9 @@ export default function CommunityDetailPage() {
     <Toast
       message={toast.message}
       variant={toast.variant}
+      placement="center"
+      durationMs={toast.durationMs}
+      actions={toast.actions}
       onClose={clearToast}
     />
   ) : null;

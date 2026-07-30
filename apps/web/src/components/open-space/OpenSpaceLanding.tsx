@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { GitHubIcon } from "@/components/icons/GitHubIcon";
 import { OpenSpaceShell } from "@/components/open-space/OpenSpaceShell";
 import { getEditorRepoUrl } from "@/lib/open-space-url";
 
@@ -45,7 +46,7 @@ export function OpenSpaceLanding() {
                 onMouseEnter={triggerStarFlash}
                 onFocus={triggerStarFlash}
               >
-                <Button className="inline-flex items-center gap-2 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-6 py-2.5 shadow-[0_0_28px_rgba(99,102,241,0.35)] transition duration-300 hover:shadow-[0_0_36px_rgba(99,102,241,0.5)] hover:!opacity-100">
+                <Button className="inline-flex items-center gap-2 !rounded-full !border-0 !bg-gradient-to-r !from-slate-500 !via-teal-600 !to-cyan-700 px-6 py-2.5 shadow-[0_0_28px_rgba(45,212,191,0.4),0_0_48px_rgba(8,145,178,0.28)] transition duration-300 hover:shadow-[0_0_36px_rgba(45,212,191,0.55),0_0_64px_rgba(8,145,178,0.38)] hover:!opacity-100">
                   <span className="material-icons text-[20px] leading-none">
                     public
                   </span>
@@ -57,9 +58,7 @@ export function OpenSpaceLanding() {
                   variant="secondary"
                   className="inline-flex items-center gap-2 !rounded-full border-white/15 bg-slate-900/50 px-6 py-2.5 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:!bg-slate-800/70"
                 >
-                  <span className="material-icons text-[20px] leading-none">
-                    draw
-                  </span>
+                  <GitHubIcon className="text-[18px]" />
                   Get the editor
                 </Button>
               </a>

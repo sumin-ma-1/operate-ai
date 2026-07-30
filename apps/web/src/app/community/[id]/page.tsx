@@ -234,42 +234,19 @@ export default function CommunityDetailPage() {
             Prompts in this post are public.
           </p>
 
-          <div className="mt-4">
-            {googleIdToken ? (
-              <div className="text-xs text-emerald-200">
-                Signed in with Google
-                <button
-                  type="button"
-                  className="ml-2 underline"
-                  onClick={() => clearGoogleIdToken()}
-                >
-                  (sign out)
-                </button>
-              </div>
-            ) : (
-              <GoogleLogin
-                onSuccess={(credentialResponse: any) => {
-                  if (credentialResponse.credential) {
-                    setGoogleIdToken(credentialResponse.credential);
-                  }
-                }}
-                onError={() => setError("Google sign-in failed")}
-                useOneTap={false}
-                theme="filled_blue"
-                shape="pill"
-                size="large"
-                text="Sign in with Google"
-              />
-            )}
-          </div>
-
           <div className="mt-6 flex flex-wrap gap-2">
             <Button
               onClick={handleOpenAsNew}
               disabled={forking}
               className="inline-flex items-center gap-1.5 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-5"
             >
-              {forking ? <SpinnerIcon size={18} /> : null}
+              {forking ? (
+                <SpinnerIcon size={18} />
+              ) : (
+                <span className="material-icons text-[18px] leading-none">
+                  draw
+                </span>
+              )}
               {forking ? "Opening…" : "Open as new"}
             </Button>
             <Button
@@ -282,16 +259,54 @@ export default function CommunityDetailPage() {
               </span>
               {usePublicShell ? "Star in editor" : starred ? "Unstar" : "Star"}
             </Button>
-            {googleIdToken ? (
-              <Button
-                variant="ghost"
-                disabled={deleting}
-                className="!rounded-full text-red-300/70 hover:text-red-300"
-                onClick={handleDelete}
-              >
-                {deleting ? "Deleting…" : "Delete post"}
-              </Button>
-            ) : null}
+          </div>
+
+          <div className="mt-8 border-t border-white/10 pt-5">
+            <p className="text-xs text-muted">
+              Posted this? Sign in with Google to delete it. Open as new and Star
+              do not require sign-in.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {googleIdToken ? (
+                <>
+                  <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
+                    <span className="material-icons text-[14px] leading-none text-emerald-300/90">
+                      check_circle
+                    </span>
+                    <span>Signed in with Google</span>
+                    <button
+                      type="button"
+                      className="ml-0.5 text-emerald-200/70 underline-offset-2 transition hover:text-emerald-100 hover:underline"
+                      onClick={() => clearGoogleIdToken()}
+                    >
+                      sign out
+                    </button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    disabled={deleting}
+                    className="!rounded-full text-red-300/70 hover:text-red-300"
+                    onClick={handleDelete}
+                  >
+                    {deleting ? "Deleting…" : "Delete post"}
+                  </Button>
+                </>
+              ) : (
+                <GoogleLogin
+                  onSuccess={(credentialResponse: any) => {
+                    if (credentialResponse.credential) {
+                      setGoogleIdToken(credentialResponse.credential);
+                    }
+                  }}
+                  onError={() => setError("Google sign-in failed")}
+                  useOneTap={false}
+                  theme="filled_blue"
+                  shape="pill"
+                  size="medium"
+                  text="Sign in with Google"
+                />
+              )}
+            </div>
           </div>
         </Card>
       )}

@@ -190,7 +190,13 @@ export default function CommunityPage() {
                   <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                 </div>
                 <Link href={`/community/${post.id}`}>
-                  <Button variant="secondary" className="w-full !rounded-full">
+                  <Button
+                    variant="secondary"
+                    className="inline-flex w-full items-center justify-center gap-1.5 !rounded-full"
+                  >
+                    <span className="material-icons text-[18px] leading-none">
+                      visibility
+                    </span>
                     View
                   </Button>
                 </Link>

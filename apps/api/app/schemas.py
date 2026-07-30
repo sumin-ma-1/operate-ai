@@ -177,7 +177,7 @@ class PublishCommunityRequest(BaseModel):
 
 
 class DeleteCommunityRequest(BaseModel):
-    delete_token: str = Field(alias="deleteToken", min_length=1)
+    delete_token: Optional[str] = Field(alias="deleteToken", default=None, min_length=1)
 
     model_config = {"populate_by_name": True}
 

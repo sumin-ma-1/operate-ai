@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import { Textarea } from "@/components/ui/Textarea";
+import { useAuthStore } from "@/stores/authStore";
 import {
   getSavedAuthorName,
   saveAuthorName,
@@ -34,6 +36,11 @@ export function PublishCommunityModal({
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const googleIdToken = useAuthStore((s) => s.googleIdToken);
+  const setGoogleIdToken = useAuthStore((s) => s.setGoogleIdToken);
+  const clearGoogleIdToken = useAuthStore(
+    (s) => s.clearGoogleIdToken
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -53,6 +60,10 @@ export function PublishCommunityModal({
       onError("Author name and title are required");
       return;
     }
+    if (!googleIdToken) {
+      onError("Please sign in with Google to publish.");
+      return;
+    }
 
     const tags = tagsInput
       .split(",")
@@ -69,7 +80,7 @@ export function PublishCommunityModal({
         description: description.trim() || undefined,
         tags: tags.length ? tags : undefined,
         workflow,
-      });
+      }, googleIdToken);
       if (post.deleteToken) {
         saveCommunityDeleteToken(post.id, post.deleteToken);
       }
@@ -102,6 +113,35 @@ export function PublishCommunityModal({
           A snapshot of this workflow will be public, including system prompts.
           Large file attachments are stripped.
         </p>
+
+        <div className="mt-4 flex flex-col gap-2">
+          {googleIdToken ? (
+            <div className="text-xs text-emerald-200">
+              Signed in with Google
+              <button
+                type="button"
+                className="ml-2 underline"
+                onClick={() => clearGoogleIdToken()}
+              >
+                (sign out)
+              </button>
+            </div>
+          ) : (
+            <GoogleLogin
+              onSuccess={(credentialResponse: any) => {
+                if (credentialResponse.credential) {
+                  setGoogleIdToken(credentialResponse.credential);
+                }
+              }}
+              onError={() => onError("Google sign-in failed")}
+              useOneTap={false}
+              theme="filled_blue"
+              shape="pill"
+              size="large"
+              text="sign_in_with_google"
+            />
+          )}
+        </div>
 
         <label className="mt-4 block text-xs font-medium text-muted">
           Author name

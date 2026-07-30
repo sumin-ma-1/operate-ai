@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import json
@@ -6,6 +6,7 @@ import json
 from app.config import (
     COMMUNITY_PUBLISH_RATE_LIMIT,
     COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS,
+    CORS_ORIGINS,
 )
 from app.schemas import (
     ApprovalDecisionRequest,
@@ -34,6 +35,7 @@ from app.services.rate_limit import SlidingWindowRateLimiter
 from app.services.run_registry import run_registry
 from app.services.secrets_store import secrets_store
 from app.services.workflow_store import WorkflowStore
+from app.services.google_auth import get_current_google_user_id
 
 app = FastAPI(title="Operate-AI API", version="0.1.0")
 
@@ -42,6 +44,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        *CORS_ORIGINS,
     ],
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|100\.\d+\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
@@ -347,6 +350,7 @@ async def get_community_post(post_id: str) -> CommunityPost:
 async def publish_community(
     payload: PublishCommunityRequest,
     request: Request,
+    user_id: str = Depends(get_current_google_user_id),
 ) -> CommunityPost:
     if not publish_rate_limiter.allow(_client_key(request)):
         raise HTTPException(
@@ -356,6 +360,7 @@ async def publish_community(
 
     snapshot = strip_large_attachments(payload.workflow)
     return community_store.publish(
+        author_user_id=user_id,
         author_name=payload.author_name,
         title=payload.title,
         description=payload.description,
@@ -391,10 +396,15 @@ async def fork_community_post(post_id: str) -> WorkflowDefinition:
 @app.delete("/community/{post_id}")
 async def delete_community_post(
     post_id: str,
-    payload: DeleteCommunityRequest,
+    payload: DeleteCommunityRequest | None = Body(default=None),
+    user_id: str = Depends(get_current_google_user_id),
 ) -> dict[str, bool]:
     try:
-        deleted = community_store.delete_post(post_id, payload.delete_token)
+        deleted = community_store.delete_post(
+            post_id,
+            author_user_id=user_id,
+            delete_token=payload.delete_token if payload else None,
+        )
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     if not deleted:

@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+.git
+.next
+**/.venv
+**/__pycache__
+**/data
+*.sqlite3
+.env
+.env.local
+deploy/open-space.env
+apps/web/.next
+**/*.log

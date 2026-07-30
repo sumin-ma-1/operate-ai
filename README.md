@@ -114,17 +114,24 @@ On the **home page**, open **Keys**:
 
 LLM nodes pick a **provider + model**. Tools (**web search**, **generate image**, **run Python**) work with Ollama and OpenAI. Cursor is not supported (no public chat API for third-party apps).
 
-Browse and share workflows in **Open Space** (`/community`): publish a snapshot from the editor, or fork a community post into your private workflows. Published posts include prompts publicly; large Start Point attachments are stripped. Publish is lightly rate-limited per client IP.
-
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API |
 | `FORGE_BASE_URL` | `http://127.0.0.1:7860` | Stable Diffusion WebUI Forge (A1111 `--api`) for `generate_image` |
 | `FORGE_DEFAULT_CHECKPOINT` | _(empty)_ | Fallback checkpoint when none saved in Keys → Forge |
 | `PYTHON_TOOL_TIMEOUT_SECONDS` | `30` | Max runtime for `run_python` (capped at 120) |
-| `NEXT_PUBLIC_API_URL` | `/backend` | Web → FastAPI proxy (`:8000`) |
+| `NEXT_PUBLIC_API_URL` | `/backend` | Web → local FastAPI proxy (`:8000`) |
+| `NEXT_PUBLIC_COMMUNITY_API_URL` | `/community-backend` | Open Space API (local proxy or public `https://…/community-backend`) |
+| `NEXT_PUBLIC_LOCAL_EDITOR_URL` | `http://localhost:3000` | Target for public “Open as new” |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` | _(empty)_ | Google OAuth for publish/delete |
+| `DATABASE_URL` | _(empty)_ | Postgres URL for public Open Space; empty = local SQLite |
+| `CORS_ORIGINS` | _(empty)_ | Extra allowed CORS origins (comma-separated) |
 | `COMMUNITY_PUBLISH_RATE_LIMIT` | `10` | Max community publishes per window |
 | `COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS` | `3600` | Rate-limit window (seconds) |
+
+Public Open Space deploy (Postgres + Docker + Nginx): see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+
+Browse and share workflows in **Open Space** (`/community` or `/open-space`): publish requires Google sign-in; delete is creator-only. “Open as new” sends the workflow to the local editor import route.
 
 ## Stack
 
@@ -142,7 +149,9 @@ operate-ai/
 ├── apps/web/                 # Visual editor
 ├── apps/api/                 # Execution & persistence
 ├── packages/workflow-schema/ # Shared workflow types
-└── docker-compose.yml        # Ollama
+├── deploy/                   # Public Open Space Nginx + env + guide
+├── docker-compose.yml        # Local Ollama
+└── docker-compose.open-space.yml  # Public Postgres + API + Web + Nginx
 ```
 
 ## Scripts
@@ -172,6 +181,6 @@ pnpm build:web      # Production build
 | `GET/DELETE` | `/workflows/{id}` | Get / delete workflow |
 | `GET` | `/community` | List community posts (`q`, `tag`, `sort`) |
 | `GET` | `/community/{id}` | Community post detail + workflow snapshot |
-| `POST` | `/community` | Publish workflow snapshot |
+| `POST` | `/community` | Publish (Bearer Google ID token) |
 | `POST` | `/community/{id}/fork` | Fork into a private workflow |
-| `DELETE` | `/community/{id}` | Delete post (requires `deleteToken`) |
+| `DELETE` | `/community/{id}` | Delete post (Bearer; creator only) |

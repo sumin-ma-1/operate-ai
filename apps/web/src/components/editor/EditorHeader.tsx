@@ -115,6 +115,17 @@ export function EditorHeader() {
             message: "Published to Open Space",
             variant: "success",
           });
+          const publicBase = (
+            process.env.NEXT_PUBLIC_OPEN_SPACE_URL || ""
+          ).replace(/\/$/, "");
+          if (publicBase) {
+            window.open(
+              `${publicBase}/community/${postId}`,
+              "_blank",
+              "noopener,noreferrer"
+            );
+            return;
+          }
           router.push(`/community/${postId}`);
         }}
         onError={(message) => setToast({ message, variant: "error" })}

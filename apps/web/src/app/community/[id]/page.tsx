@@ -3,20 +3,25 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import { Toast } from "@/components/ui/Toast";
+import { useAuthStore } from "@/stores/authStore";
 import {
   getCommunityDeleteToken,
   removeCommunityDeleteToken,
 } from "@/lib/community-local";
 import { getNodeTypeLabel } from "@/lib/node-labels";
 import {
+  getPublicOpenSpaceHref,
+  isLocalEditorHost,
+} from "@/lib/open-space-url";
+import {
   deleteCommunityPost,
   fetchCommunityPost,
-  forkCommunityPost,
 } from "@/lib/workflow-api";
 import {
   isStarred,
@@ -29,6 +34,8 @@ export default function CommunityDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const postId = params.id;
+  const publicPostHref = getPublicOpenSpaceHref(`/community/${postId}`);
+  const bounceToPublic = Boolean(publicPostHref && isLocalEditorHost());
 
   const [post, setPost] = useState<CommunityPost | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,12 +44,21 @@ export default function CommunityDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteToken, setDeleteToken] = useState<string | null>(null);
   const [starred, setStarred] = useState(false);
+  const googleIdToken = useAuthStore((s) => s.googleIdToken);
+  const setGoogleIdToken = useAuthStore((s) => s.setGoogleIdToken);
+  const clearGoogleIdToken = useAuthStore((s) => s.clearGoogleIdToken);
   const [toast, setToast] = useState<{
     message: string;
     variant: "success" | "error";
   } | null>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
+
+  useEffect(() => {
+    if (bounceToPublic && publicPostHref) {
+      window.location.replace(publicPostHref);
+    }
+  }, [bounceToPublic, publicPostHref]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,8 +77,9 @@ export default function CommunityDetailPage() {
   }, [postId]);
 
   useEffect(() => {
+    if (bounceToPublic) return;
     void load();
-  }, [load]);
+  }, [load, bounceToPublic]);
 
   const nodeCounts = useMemo(() => {
     if (!post) return [];
@@ -73,16 +90,26 @@ export default function CommunityDetailPage() {
     return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [post]);
 
+  if (bounceToPublic) {
+    return (
+      <p className="p-8 text-center text-sm text-muted">
+        Opening public Open Space…
+      </p>
+    );
+  }
+
   const handleOpenAsNew = async () => {
     setForking(true);
     setError(null);
-    try {
-      const workflow = await forkCommunityPost(postId);
-      router.push(`/editor/${workflow.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Open as new failed");
-      setForking(false);
-    }
+    // Public Open Space -> local editor import route.
+    // Note: we intentionally skip calling `forkCommunityPost` here; the local
+    // editor import page will fetch + save into the user's local workflow DB.
+    const localEditorBase =
+      process.env.NEXT_PUBLIC_LOCAL_EDITOR_URL || "http://localhost:3000";
+    const target = `${localEditorBase}/editor/import?postId=${encodeURIComponent(
+      postId
+    )}`;
+    window.location.assign(target);
   };
 
   const handleToggleStar = () => {
@@ -108,12 +135,15 @@ export default function CommunityDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteToken) return;
+    if (!googleIdToken) return;
     if (!confirm("Delete this community post?")) return;
     setDeleting(true);
     setError(null);
     try {
-      await deleteCommunityPost(postId, deleteToken);
+      await deleteCommunityPost(postId, {
+        deleteToken: deleteToken ?? undefined,
+        authToken: googleIdToken,
+      });
       removeCommunityDeleteToken(postId);
       router.push("/community");
     } catch (err) {
@@ -193,6 +223,35 @@ export default function CommunityDetailPage() {
               canvas you are editing. Prompts in this post are public.
             </p>
 
+            <div className="mt-4">
+              {googleIdToken ? (
+                <div className="text-xs text-emerald-200">
+                  Signed in with Google
+                  <button
+                    type="button"
+                    className="ml-2 underline"
+                    onClick={() => clearGoogleIdToken()}
+                  >
+                    (sign out)
+                  </button>
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={(credentialResponse: any) => {
+                    if (credentialResponse.credential) {
+                      setGoogleIdToken(credentialResponse.credential);
+                    }
+                  }}
+                  onError={() => setError("Google sign-in failed")}
+                  useOneTap={false}
+                  theme="filled_blue"
+                  shape="pill"
+                  size="large"
+                  text="Sign in with Google"
+                />
+              )}
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-2">
               <Button
                 onClick={handleOpenAsNew}
@@ -212,7 +271,7 @@ export default function CommunityDetailPage() {
                 </span>
                 {starred ? "Unstar" : "Star"}
               </Button>
-              {deleteToken ? (
+              {googleIdToken ? (
                 <Button
                   variant="ghost"
                   disabled={deleting}

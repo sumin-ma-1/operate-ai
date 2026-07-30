@@ -21,9 +21,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   let response: Response;
   try {
+    const userHeaders =
+      (options?.headers as Record<string, string> | undefined) ?? {};
     response = await fetch(url, {
-      headers: { "Content-Type": "application/json" },
       ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...userHeaders,
+      },
     });
   } catch (err) {
     const reason = err instanceof Error ? err.message : "Network error";
@@ -501,11 +506,13 @@ export async function fetchCommunityPost(id: string): Promise<CommunityPost> {
 }
 
 export async function publishCommunityPost(
-  payload: PublishCommunityRequest
+  payload: PublishCommunityRequest,
+  authToken?: string
 ): Promise<CommunityPost> {
   return request<CommunityPost>("/community", {
     method: "POST",
     body: JSON.stringify(payload),
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
   });
 }
 
@@ -519,10 +526,18 @@ export async function forkCommunityPost(
 
 export async function deleteCommunityPost(
   id: string,
-  deleteToken: string
+  options?: { authToken?: string; deleteToken?: string }
 ): Promise<void> {
+  const body =
+    options?.deleteToken !== undefined
+      ? JSON.stringify({ deleteToken: options.deleteToken })
+      : undefined;
+
   await request(`/community/${id}`, {
     method: "DELETE",
-    body: JSON.stringify({ deleteToken }),
+    body,
+    headers: options?.authToken
+      ? { Authorization: `Bearer ${options.authToken}` }
+      : undefined,
   });
 }

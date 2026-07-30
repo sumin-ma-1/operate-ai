@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { GoogleOAuthProviderWrapper } from "@/components/providers/GoogleOAuthProviderWrapper";
 
 export const metadata: Metadata = {
   title: "Operate AI",
@@ -18,7 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <GoogleOAuthProviderWrapper>{children}</GoogleOAuthProviderWrapper>
+      </body>
     </html>
   );
 }

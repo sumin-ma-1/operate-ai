@@ -1,4 +1,4 @@
-"""SQLite-backed community gallery posts."""
+"""Community gallery posts — SQLite (local) or Postgres (public)."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, Protocol
 
-from app.config import COMMUNITY_DB_PATH
+from app.config import COMMUNITY_DB_PATH, DATABASE_URL
 from app.schemas import (
     CommunityPost,
     CommunityPostSummary,
@@ -38,8 +38,66 @@ def _normalize_tags(tags: list[str] | None) -> list[str]:
     return cleaned
 
 
-class CommunityStore:
-    def __init__(self, db_path: Path = COMMUNITY_DB_PATH) -> None:
+def _row_to_summary(row: Any) -> CommunityPostSummary:
+    tags_raw = row["tags_json"]
+    return CommunityPostSummary(
+        id=row["id"],
+        title=row["title"],
+        description=row["description"] or None,
+        authorName=row["author_name"],
+        tags=json.loads(tags_raw or "[]"),
+        forkCount=row["fork_count"],
+        nodeCount=row["node_count"],
+        createdAt=row["created_at"],
+        updatedAt=row["updated_at"],
+    )
+
+
+def _row_to_post(row: Any, *, include_delete_token: bool = False) -> CommunityPost:
+    summary = _row_to_summary(row)
+    workflow = WorkflowDefinition.model_validate(json.loads(row["workflow_json"]))
+    return CommunityPost(
+        **summary.model_dump(by_alias=True),
+        workflow=workflow,
+        deleteToken=row["delete_token"] if include_delete_token else None,
+    )
+
+
+class _CommunityBackend(Protocol):
+    def list_posts(
+        self,
+        *,
+        q: str | None = None,
+        tag: str | None = None,
+        sort: Literal["newest", "forks"] = "newest",
+    ) -> list[CommunityPostSummary]: ...
+
+    def get_post(self, post_id: str) -> CommunityPost | None: ...
+
+    def publish(
+        self,
+        *,
+        author_user_id: str,
+        author_name: str,
+        title: str,
+        description: str | None,
+        tags: list[str] | None,
+        workflow: WorkflowDefinition,
+    ) -> CommunityPost: ...
+
+    def increment_fork_count(self, post_id: str) -> CommunityPost | None: ...
+
+    def delete_post(
+        self,
+        post_id: str,
+        *,
+        author_user_id: str,
+        delete_token: str | None = None,
+    ) -> bool: ...
+
+
+class _SqliteBackend:
+    def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
@@ -58,6 +116,7 @@ class CommunityStore:
                     title TEXT NOT NULL,
                     description TEXT,
                     author_name TEXT NOT NULL,
+                    author_user_id TEXT,
                     tags_json TEXT NOT NULL,
                     workflow_json TEXT NOT NULL,
                     delete_token TEXT NOT NULL,
@@ -68,6 +127,14 @@ class CommunityStore:
                 )
                 """
             )
+            cols = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(community_posts)").fetchall()
+            }
+            if "author_user_id" not in cols:
+                conn.execute(
+                    "ALTER TABLE community_posts ADD COLUMN author_user_id TEXT"
+                )
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_community_created
@@ -80,32 +147,6 @@ class CommunityStore:
                 ON community_posts(fork_count DESC)
                 """
             )
-
-    def _row_to_summary(self, row: sqlite3.Row) -> CommunityPostSummary:
-        return CommunityPostSummary(
-            id=row["id"],
-            title=row["title"],
-            description=row["description"] or None,
-            authorName=row["author_name"],
-            tags=json.loads(row["tags_json"] or "[]"),
-            forkCount=row["fork_count"],
-            nodeCount=row["node_count"],
-            createdAt=row["created_at"],
-            updatedAt=row["updated_at"],
-        )
-
-    def _row_to_post(
-        self, row: sqlite3.Row, *, include_delete_token: bool = False
-    ) -> CommunityPost:
-        summary = self._row_to_summary(row)
-        workflow = WorkflowDefinition.model_validate(
-            json.loads(row["workflow_json"])
-        )
-        return CommunityPost(
-            **summary.model_dump(by_alias=True),
-            workflow=workflow,
-            deleteToken=row["delete_token"] if include_delete_token else None,
-        )
 
     def list_posts(
         self,
@@ -139,7 +180,7 @@ class CommunityStore:
 
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
-        return [self._row_to_summary(row) for row in rows]
+        return [_row_to_summary(row) for row in rows]
 
     def get_post(self, post_id: str) -> CommunityPost | None:
         with self._connect() as conn:
@@ -148,11 +189,12 @@ class CommunityStore:
             ).fetchone()
         if row is None:
             return None
-        return self._row_to_post(row, include_delete_token=False)
+        return _row_to_post(row, include_delete_token=False)
 
     def publish(
         self,
         *,
+        author_user_id: str,
         author_name: str,
         title: str,
         description: str | None,
@@ -169,16 +211,17 @@ class CommunityStore:
             conn.execute(
                 """
                 INSERT INTO community_posts (
-                    id, title, description, author_name, tags_json,
+                    id, title, description, author_name, author_user_id, tags_json,
                     workflow_json, delete_token, fork_count, node_count,
                     created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
                 """,
                 (
                     post_id,
                     title.strip(),
                     (description or "").strip() or None,
                     author_name.strip(),
+                    author_user_id,
                     json.dumps(normalized_tags),
                     json.dumps(payload, ensure_ascii=False),
                     delete_token,
@@ -192,7 +235,7 @@ class CommunityStore:
             ).fetchone()
 
         assert row is not None
-        return self._row_to_post(row, include_delete_token=True)
+        return _row_to_post(row, include_delete_token=True)
 
     def increment_fork_count(self, post_id: str) -> CommunityPost | None:
         now = _now()
@@ -210,17 +253,295 @@ class CommunityStore:
             ).fetchone()
         if row is None:
             return None
-        return self._row_to_post(row, include_delete_token=False)
+        return _row_to_post(row, include_delete_token=False)
 
-    def delete_post(self, post_id: str, delete_token: str) -> bool:
+    def delete_post(
+        self,
+        post_id: str,
+        *,
+        author_user_id: str,
+        delete_token: str | None = None,
+    ) -> bool:
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT delete_token FROM community_posts WHERE id = ?",
+                "SELECT author_user_id, delete_token FROM community_posts WHERE id = ?",
                 (post_id,),
             ).fetchone()
             if row is None:
                 return False
-            if not secrets.compare_digest(row["delete_token"], delete_token):
-                raise PermissionError("Invalid delete token")
+
+            stored_author_user_id = row["author_user_id"]
+            if stored_author_user_id and stored_author_user_id == author_user_id:
+                pass
+            elif (
+                (stored_author_user_id is None or stored_author_user_id == "")
+                and delete_token is not None
+            ):
+                if not secrets.compare_digest(row["delete_token"], delete_token):
+                    raise PermissionError("Invalid delete token")
+            else:
+                raise PermissionError("Not authorized to delete this post")
             conn.execute("DELETE FROM community_posts WHERE id = ?", (post_id,))
             return True
+
+
+class _PostgresBackend:
+    def __init__(self, database_url: str) -> None:
+        self.database_url = database_url
+        self._init_db()
+
+    def _connect(self):
+        import psycopg
+        from psycopg.rows import dict_row
+
+        return psycopg.connect(self.database_url, row_factory=dict_row)
+
+    def _init_db(self) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS community_posts (
+                        id TEXT PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        author_name TEXT NOT NULL,
+                        author_user_id TEXT,
+                        tags_json TEXT NOT NULL,
+                        workflow_json TEXT NOT NULL,
+                        delete_token TEXT NOT NULL,
+                        fork_count INTEGER NOT NULL DEFAULT 0,
+                        node_count INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                    """
+                )
+                cur.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_community_created
+                    ON community_posts(created_at DESC)
+                    """
+                )
+                cur.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_community_forks
+                    ON community_posts(fork_count DESC)
+                    """
+                )
+                cur.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_community_author_user
+                    ON community_posts(author_user_id)
+                    """
+                )
+            conn.commit()
+
+    def list_posts(
+        self,
+        *,
+        q: str | None = None,
+        tag: str | None = None,
+        sort: Literal["newest", "forks"] = "newest",
+    ) -> list[CommunityPostSummary]:
+        order = (
+            "fork_count DESC, created_at DESC"
+            if sort == "forks"
+            else "created_at DESC"
+        )
+        clauses: list[str] = []
+        params: list[str] = []
+
+        if q and q.strip():
+            needle = f"%{q.strip().lower()}%"
+            clauses.append(
+                "(LOWER(title) LIKE %s OR LOWER(COALESCE(description, '')) LIKE %s "
+                "OR LOWER(author_name) LIKE %s OR LOWER(tags_json) LIKE %s)"
+            )
+            params.extend([needle, needle, needle, needle])
+
+        if tag and tag.strip():
+            clauses.append("LOWER(tags_json) LIKE %s")
+            params.append(f'%"{tag.strip().lower()}"%')
+
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        sql = f"SELECT * FROM community_posts {where} ORDER BY {order}"
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                rows = cur.fetchall()
+        return [_row_to_summary(row) for row in rows]
+
+    def get_post(self, post_id: str) -> CommunityPost | None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM community_posts WHERE id = %s", (post_id,)
+                )
+                row = cur.fetchone()
+        if row is None:
+            return None
+        return _row_to_post(row, include_delete_token=False)
+
+    def publish(
+        self,
+        *,
+        author_user_id: str,
+        author_name: str,
+        title: str,
+        description: str | None,
+        tags: list[str] | None,
+        workflow: WorkflowDefinition,
+    ) -> CommunityPost:
+        post_id = f"cp-{uuid.uuid4().hex[:12]}"
+        delete_token = secrets.token_urlsafe(24)
+        now = _now()
+        normalized_tags = _normalize_tags(tags)
+        payload = workflow.model_dump(by_alias=True)
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO community_posts (
+                        id, title, description, author_name, author_user_id, tags_json,
+                        workflow_json, delete_token, fork_count, node_count,
+                        created_at, updated_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s)
+                    """,
+                    (
+                        post_id,
+                        title.strip(),
+                        (description or "").strip() or None,
+                        author_name.strip(),
+                        author_user_id,
+                        json.dumps(normalized_tags),
+                        json.dumps(payload, ensure_ascii=False),
+                        delete_token,
+                        len(workflow.nodes),
+                        now,
+                        now,
+                    ),
+                )
+                cur.execute(
+                    "SELECT * FROM community_posts WHERE id = %s", (post_id,)
+                )
+                row = cur.fetchone()
+            conn.commit()
+
+        assert row is not None
+        return _row_to_post(row, include_delete_token=True)
+
+    def increment_fork_count(self, post_id: str) -> CommunityPost | None:
+        now = _now()
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE community_posts
+                    SET fork_count = fork_count + 1, updated_at = %s
+                    WHERE id = %s
+                    """,
+                    (now, post_id),
+                )
+                cur.execute(
+                    "SELECT * FROM community_posts WHERE id = %s", (post_id,)
+                )
+                row = cur.fetchone()
+            conn.commit()
+        if row is None:
+            return None
+        return _row_to_post(row, include_delete_token=False)
+
+    def delete_post(
+        self,
+        post_id: str,
+        *,
+        author_user_id: str,
+        delete_token: str | None = None,
+    ) -> bool:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT author_user_id, delete_token FROM community_posts WHERE id = %s",
+                    (post_id,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    return False
+
+                stored_author_user_id = row["author_user_id"]
+                if stored_author_user_id and stored_author_user_id == author_user_id:
+                    pass
+                elif (
+                    (stored_author_user_id is None or stored_author_user_id == "")
+                    and delete_token is not None
+                ):
+                    if not secrets.compare_digest(row["delete_token"], delete_token):
+                        raise PermissionError("Invalid delete token")
+                else:
+                    raise PermissionError("Not authorized to delete this post")
+                cur.execute("DELETE FROM community_posts WHERE id = %s", (post_id,))
+            conn.commit()
+            return True
+
+
+class CommunityStore:
+    def __init__(
+        self,
+        db_path: Path = COMMUNITY_DB_PATH,
+        database_url: str | None = DATABASE_URL,
+    ) -> None:
+        self._backend: _CommunityBackend
+        if database_url:
+            self._backend = _PostgresBackend(database_url)
+        else:
+            self._backend = _SqliteBackend(db_path)
+
+    def list_posts(
+        self,
+        *,
+        q: str | None = None,
+        tag: str | None = None,
+        sort: Literal["newest", "forks"] = "newest",
+    ) -> list[CommunityPostSummary]:
+        return self._backend.list_posts(q=q, tag=tag, sort=sort)
+
+    def get_post(self, post_id: str) -> CommunityPost | None:
+        return self._backend.get_post(post_id)
+
+    def publish(
+        self,
+        *,
+        author_user_id: str,
+        author_name: str,
+        title: str,
+        description: str | None,
+        tags: list[str] | None,
+        workflow: WorkflowDefinition,
+    ) -> CommunityPost:
+        return self._backend.publish(
+            author_user_id=author_user_id,
+            author_name=author_name,
+            title=title,
+            description=description,
+            tags=tags,
+            workflow=workflow,
+        )
+
+    def increment_fork_count(self, post_id: str) -> CommunityPost | None:
+        return self._backend.increment_fork_count(post_id)
+
+    def delete_post(
+        self,
+        post_id: str,
+        *,
+        author_user_id: str,
+        delete_token: str | None = None,
+    ) -> bool:
+        return self._backend.delete_post(
+            post_id,
+            author_user_id=author_user_id,
+            delete_token=delete_token,
+        )

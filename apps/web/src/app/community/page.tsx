@@ -6,6 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import {
+  getPublicOpenSpaceHref,
+  isLocalEditorHost,
+} from "@/lib/open-space-url";
 import { fetchCommunityPosts } from "@/lib/workflow-api";
 import type { CommunityPostSummary } from "@operate-ai/workflow-schema";
 
@@ -17,6 +21,14 @@ export default function CommunityPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("newest");
+  const publicHref = getPublicOpenSpaceHref("/open-space");
+  const bounceToPublic = Boolean(publicHref && isLocalEditorHost());
+
+  useEffect(() => {
+    if (bounceToPublic && publicHref) {
+      window.location.replace(publicHref);
+    }
+  }, [bounceToPublic, publicHref]);
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
@@ -35,11 +47,20 @@ export default function CommunityPage() {
   }, [query, sort]);
 
   useEffect(() => {
+    if (bounceToPublic) return;
     const handle = window.setTimeout(() => {
       void loadPosts();
     }, 200);
     return () => window.clearTimeout(handle);
-  }, [loadPosts]);
+  }, [loadPosts, bounceToPublic]);
+
+  if (bounceToPublic) {
+    return (
+      <p className="p-8 text-center text-sm text-muted">
+        Opening public Open Space…
+      </p>
+    );
+  }
 
   return (
     <div className="space-backdrop min-h-screen">

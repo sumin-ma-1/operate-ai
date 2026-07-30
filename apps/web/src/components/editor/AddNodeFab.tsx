@@ -101,7 +101,7 @@ export function AddNodeFab() {
     if (!open) return;
     refreshStarred();
 
-    const handlePointerDown = (event: MouseEvent) => {
+    const handlePointerDown = (event: globalThis.MouseEvent) => {
       if (draggingRef.current) return;
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);

@@ -1,0 +1,80 @@
+# Public Open Space stack: Postgres + API + Web + Nginx
+#
+# Usage:
+#   cp deploy/open-space.env.example deploy/open-space.env
+#   # edit secrets / domain / Google client id
+#   docker compose -f docker-compose.open-space.yml --env-file deploy/open-space.env up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: operate-ai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-operate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-operate_community}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-operate} -d ${POSTGRES_DB:-operate_community}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: operate-ai-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-operate}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-operate_community}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Public Open Space does not need local Forge/Ollama; leave defaults or point
+      # FORGE_BASE_URL at a Cloudflare Tunnel URL if you ever expose generation.
+      FORGE_BASE_URL: ${FORGE_BASE_URL:-http://127.0.0.1:7860}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+      COMMUNITY_PUBLISH_RATE_LIMIT: ${COMMUNITY_PUBLISH_RATE_LIMIT:-10}
+      COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS: ${COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS:-3600}
+    volumes:
+      - api_data:/app/data
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /backend
+        NEXT_PUBLIC_COMMUNITY_API_URL: /community-backend
+        NEXT_PUBLIC_LOCAL_EDITOR_URL: ${NEXT_PUBLIC_LOCAL_EDITOR_URL:-http://localhost:3000}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        API_PROXY_TARGET: http://api:8000
+        COMMUNITY_API_PROXY_TARGET: http://api:8000
+    container_name: operate-ai-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_PROXY_TARGET: http://api:8000
+      COMMUNITY_API_PROXY_TARGET: http://api:8000
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: operate-ai-nginx
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx/open-space.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_data:
+  api_data:

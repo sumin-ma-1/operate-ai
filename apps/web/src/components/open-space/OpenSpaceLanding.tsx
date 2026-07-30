@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { OpenSpaceShell } from "@/components/open-space/OpenSpaceShell";
@@ -6,10 +9,22 @@ import { getEditorRepoUrl } from "@/lib/open-space-url";
 
 export function OpenSpaceLanding() {
   const editorRepoUrl = getEditorRepoUrl();
+  const [starFlashKey, setStarFlashKey] = useState(0);
+
+  const triggerStarFlash = () => {
+    setStarFlashKey((key) => key + 1);
+  };
 
   return (
     <OpenSpaceShell active="home">
       <section className="relative mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-6xl flex-col justify-center px-6 pb-16 pt-10 sm:px-8">
+        {starFlashKey > 0 && (
+          <span
+            key={starFlashKey}
+            className="star-flash is-active"
+            aria-hidden="true"
+          />
+        )}
         <div className="grid w-full items-center gap-10 md:grid-cols-[minmax(0,1fr)_11rem] lg:grid-cols-[minmax(0,1fr)_14rem] xl:grid-cols-[minmax(0,40rem)_1fr]">
           <div className="os-landing-fade max-w-2xl md:pr-4 lg:pr-8">
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-sky-300/80">
@@ -25,7 +40,11 @@ export function OpenSpaceLanding() {
               star pieces to paste into work you already have open.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/open-space">
+              <Link
+                href="/open-space"
+                onMouseEnter={triggerStarFlash}
+                onFocus={triggerStarFlash}
+              >
                 <Button className="inline-flex items-center gap-2 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-6 py-2.5 shadow-[0_0_28px_rgba(99,102,241,0.35)] transition duration-300 hover:shadow-[0_0_36px_rgba(99,102,241,0.5)] hover:!opacity-100">
                   <span className="material-icons text-[20px] leading-none">
                     public

@@ -6,6 +6,7 @@
 <p align="center">
   A visual editor for easily building AI agents and LLM workflows.
   <br> An open space for any agentic flow you envision.
+  <br> Check out [Open Space](https://stamp-floyd-usual-letter.trycloudflare.com/).
 </p>
 
 <p align="center">
@@ -130,6 +131,8 @@ LLM nodes pick a **provider + model**. Tools (**web search**, **generate image**
 | `COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS` | `3600` | Rate-limit window (seconds) |
 
 Public Open Space deploy (Postgres + Docker + Nginx): see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+
+Check out [Open Space](https://stamp-floyd-usual-letter.trycloudflare.com/).
 
 Browse and share workflows in **Open Space** (`/community` or `/open-space`): publish requires Google sign-in; delete is creator-only. “Open as new” sends the workflow to the local editor import route.
 

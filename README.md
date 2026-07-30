@@ -20,8 +20,7 @@
 ## Download
 
 - **Editor:** clone this repo and run from source ([Run from source](#run-from-source)).
-- **Open Space:** browse shared workflows at [Open Space](https://stamp-floyd-usual-letter.trycloudflare.com/).  
-  *(Cloudflare quick tunnel — the URL changes if the tunnel restarts.)*
+- **Open Space:** browse shared workflows at [Open Space](https://stamp-floyd-usual-letter.trycloudflare.com/).
 
 ## How it works
 
@@ -36,7 +35,7 @@ flowchart LR
 | Node | Role |
 |------|------|
 | **Start Point** | Text and attachments (`.docx`, `.pdf`, images, …) |
-| **LLM** | Model call — receives original input + upstream output |
+| **LLM** | Model call, receives original input + upstream output |
 | **End Point** | Displays the final result |
 
 ```mermaid
@@ -53,10 +52,10 @@ flowchart TB
   N -->|End Point click| Panel
 ```
 
-- **+** — add Start Point, LLM, or End Point nodes
-- **Start Point** — run the workflow from the node card (play/stop)
-- **Results panel** — live progress, final output, collapsible node logs
-- **Inspectors** — properties next to the selected node or edge
+- **+**: add Start Point, LLM, or End Point nodes
+- **Start Point**: run the workflow from the node card (play/stop)
+- **Results panel**: live progress, final output, collapsible node logs
+- **Inspectors**: properties next to the selected node or edge
 
 Locally, the Next.js editor talks to a FastAPI executor (SSE/REST). Models can run on your machine (Ollama) or via cloud providers.
 
@@ -67,18 +66,18 @@ Locally, the Next.js editor talks to a FastAPI executor (SSE/REST). Models can r
 - Attach documents and images at Start Point
 - Use tools from LLM nodes: **web search**, **generate image**, **run Python**
 - Share workflows on **Open Space** (publish with Google sign-in)
-- **Open as new** — import a community post into your local editor as a private workflow
-- **Star** — save a copy for **Add (+) → Starred** so you can paste into an open canvas
+- **Open as new**: import a community post into your local editor as a private workflow
+- **Star**: save a copy for **Add (+) → Starred** so you can paste into an open canvas
 - Point local editors at a public Open Space host for browse / publish / import
 
 ## Bring your own model
 
 On the **home page**, open **Keys**:
 
-- **Providers** — store OpenAI / Anthropic / Gemini API keys once for this machine
-- **Ollama** — list installed models, **Pull** new ones, **Delete** unused ones (requires Ollama running)
-- **Forge** — default image checkpoint for `generate_image` (requires Forge with `--api`)
-- **Per-node override** — in an LLM (or loop checker) inspector, save a different key for that node only, test the connection, or clear the override
+- **Providers**: store OpenAI / Anthropic / Gemini API keys once for this machine
+- **Ollama**: list installed models, **Pull** new ones, **Delete** unused ones (requires Ollama running)
+- **Forge**: default image checkpoint for `generate_image` (requires Forge with `--api`)
+- **Per-node override**: in an LLM (or loop checker) inspector, save a different key for that node only, test the connection, or clear the override
 
 LLM nodes pick a **provider + model**. Tools work with Ollama and OpenAI. Cursor is not supported (no public chat API for third-party apps).
 

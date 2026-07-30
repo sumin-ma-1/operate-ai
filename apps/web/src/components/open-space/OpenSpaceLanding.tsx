@@ -2,10 +2,10 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { OpenSpaceShell } from "@/components/open-space/OpenSpaceShell";
-import { getLocalEditorBaseUrl } from "@/lib/open-space-url";
+import { getEditorRepoUrl } from "@/lib/open-space-url";
 
 export function OpenSpaceLanding() {
-  const editorUrl = getLocalEditorBaseUrl();
+  const editorRepoUrl = getEditorRepoUrl();
 
   return (
     <OpenSpaceShell active="home">
@@ -31,7 +31,7 @@ export function OpenSpaceLanding() {
                 Browse gallery
               </Button>
             </Link>
-            <a href={editorUrl} target="_blank" rel="noopener noreferrer">
+            <a href={editorRepoUrl} target="_blank" rel="noopener noreferrer">
               <Button
                 variant="secondary"
                 className="inline-flex items-center gap-2 !rounded-full border-white/15 bg-slate-900/50 px-6 py-2.5 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:!bg-slate-800/70"

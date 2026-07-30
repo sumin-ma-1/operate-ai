@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { getLocalEditorBaseUrl } from "@/lib/open-space-url";
+import { getEditorRepoUrl } from "@/lib/open-space-url";
 
 interface OpenSpaceShellProps {
   children: ReactNode;
@@ -13,7 +13,7 @@ export function OpenSpaceShell({
   children,
   active = "home",
 }: OpenSpaceShellProps) {
-  const editorUrl = getLocalEditorBaseUrl();
+  const editorRepoUrl = getEditorRepoUrl();
 
   return (
     <div className="space-backdrop flex min-h-screen flex-col">
@@ -46,7 +46,7 @@ export function OpenSpaceShell({
               Gallery
             </Link>
             <a
-              href={editorUrl}
+              href={editorRepoUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="ml-1 inline-flex items-center rounded-full border-0 bg-gradient-to-r from-sky-600 via-indigo-600 to-indigo-700 px-3.5 py-1.5 text-sm font-medium text-white shadow-[0_0_18px_rgba(99,102,241,0.25)] transition duration-300 hover:shadow-[0_0_24px_rgba(99,102,241,0.4)] hover:opacity-95"
@@ -71,12 +71,12 @@ export function OpenSpaceShell({
             </p>
           </div>
           <a
-            href={editorUrl}
+            href={editorRepoUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-muted underline-offset-2 transition hover:text-foreground hover:underline"
           >
-            Run Operate AI locally →
+            Get Operate AI on GitHub →
           </a>
         </div>
       </footer>

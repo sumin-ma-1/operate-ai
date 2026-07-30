@@ -13,11 +13,18 @@ export function getPublicOpenSpaceHref(path = "/"): string | null {
   return `${base}${normalized}`;
 }
 
-/** Local Operate AI editor base URL (for “Get the editor” / Open as new). */
+/** Local Operate AI editor base URL (for Open as new / import). */
 export function getLocalEditorBaseUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_LOCAL_EDITOR_URL || "").trim();
   if (raw) return raw.replace(/\/$/, "");
   return "http://localhost:3000";
+}
+
+/** Repo URL for “Get the editor” (clone / install instructions). */
+export function getEditorRepoUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_EDITOR_REPO_URL || "").trim();
+  if (raw) return raw.replace(/\/$/, "");
+  return "https://github.com/sumin-ma-1/operate-ai";
 }
 
 /** Built as the public Open Space host (Docker), not the local editor. */

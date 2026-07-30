@@ -10,52 +10,55 @@ export function OpenSpaceLanding() {
   return (
     <OpenSpaceShell active="home">
       <section className="relative mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-6xl flex-col justify-center px-6 pb-16 pt-10 sm:px-8">
-        <div className="os-landing-fade max-w-2xl">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-sky-300/80">
-            Operate AI
-          </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Open Space
-          </h1>
-          <p className="mt-4 max-w-lg text-base leading-relaxed text-muted sm:text-lg">
-            Community workflows for Operate AI. Browse shared graphs, open a
-            private copy in your local editor, or star pieces to paste into
-            work you already have open.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/open-space">
-              <Button className="inline-flex items-center gap-2 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-6 py-2.5 shadow-[0_0_28px_rgba(99,102,241,0.35)] transition duration-300 hover:shadow-[0_0_36px_rgba(99,102,241,0.5)] hover:!opacity-100">
-                <span className="material-icons text-[20px] leading-none">
-                  public
-                </span>
-                Browse gallery
-              </Button>
-            </Link>
-            <a href={editorRepoUrl} target="_blank" rel="noopener noreferrer">
-              <Button
-                variant="secondary"
-                className="inline-flex items-center gap-2 !rounded-full border-white/15 bg-slate-900/50 px-6 py-2.5 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:!bg-slate-800/70"
-              >
-                <span className="material-icons text-[20px] leading-none">
-                  draw
-                </span>
-                Get the editor
-              </Button>
-            </a>
+        <div className="grid w-full items-center gap-10 md:grid-cols-[minmax(0,1fr)_11rem] lg:grid-cols-[minmax(0,1fr)_14rem] xl:grid-cols-[minmax(0,40rem)_1fr]">
+          <div className="os-landing-fade max-w-2xl md:pr-4 lg:pr-8">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-sky-300/80">
+              Operate AI
+            </p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+              Open Space
+            </h1>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
+              Community workflows for Operate AI.
+              <br />
+              Browse shared graphs, open a private copy in your local editor, or
+              star pieces to paste into work you already have open.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/open-space">
+                <Button className="inline-flex items-center gap-2 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-6 py-2.5 shadow-[0_0_28px_rgba(99,102,241,0.35)] transition duration-300 hover:shadow-[0_0_36px_rgba(99,102,241,0.5)] hover:!opacity-100">
+                  <span className="material-icons text-[20px] leading-none">
+                    public
+                  </span>
+                  Browse gallery
+                </Button>
+              </Link>
+              <a href={editorRepoUrl} target="_blank" rel="noopener noreferrer">
+                <Button
+                  variant="secondary"
+                  className="inline-flex items-center gap-2 !rounded-full border-white/15 bg-slate-900/50 px-6 py-2.5 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:!bg-slate-800/70"
+                >
+                  <span className="material-icons text-[20px] leading-none">
+                    draw
+                  </span>
+                  Get the editor
+                </Button>
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div
-          className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 opacity-90 md:block lg:right-12"
-          aria-hidden="true"
-        >
-          <img
-            src="/retro_spaceship_thruster.gif"
-            alt=""
-            width={160}
-            height={160}
-            className="os-landing-ship drop-shadow-[0_0_40px_rgba(56,189,248,0.25)]"
-          />
+          <div
+            className="pointer-events-none hidden justify-self-end opacity-90 md:block xl:translate-x-6"
+            aria-hidden="true"
+          >
+            <img
+              src="/retro_spaceship_thruster.gif"
+              alt=""
+              width={160}
+              height={160}
+              className="os-landing-ship drop-shadow-[0_0_40px_rgba(56,189,248,0.25)]"
+            />
+          </div>
         </div>
       </section>
 

@@ -5,11 +5,19 @@ export function getPublicOpenSpaceBaseUrl(): string | null {
   return raw.replace(/\/$/, "");
 }
 
-export function getPublicOpenSpaceHref(path = "/open-space"): string | null {
+/** Default bounce target is the public marketing home (`/`). */
+export function getPublicOpenSpaceHref(path = "/"): string | null {
   const base = getPublicOpenSpaceBaseUrl();
   if (!base) return null;
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${base}${normalized}`;
+}
+
+/** Local Operate AI editor base URL (for “Get the editor” / Open as new). */
+export function getLocalEditorBaseUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_LOCAL_EDITOR_URL || "").trim();
+  if (raw) return raw.replace(/\/$/, "");
+  return "http://localhost:3000";
 }
 
 /** Built as the public Open Space host (Docker), not the local editor. */

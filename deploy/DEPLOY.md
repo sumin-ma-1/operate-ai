@@ -42,7 +42,8 @@ Open `http://YOUR_VPS_IP/` or put TLS in front (Caddy / Cloudflare / certbot).
 Health checks:
 
 - `http://YOUR_HOST/backend/health` → `{"status":"ok"}`
-- `http://YOUR_HOST/community` or `/open-space` → UI
+- `http://YOUR_HOST/` → Open Space landing
+- `http://YOUR_HOST/open-space` or `/community` → gallery UI
 - `http://YOUR_HOST/community-backend/community` → JSON list
 
 ## 3. Point local editors at the public Open Space API

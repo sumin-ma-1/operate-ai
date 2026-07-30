@@ -8,9 +8,9 @@ import {
 } from "@/lib/open-space-url";
 import CommunityPage from "../community/page";
 
-/** Local editor: bounce to the public Open Space. Public host: render gallery. */
+/** Local editor: bounce to the public Open Space home. Public host: gallery. */
 export default function OpenSpaceAliasPage() {
-  const publicHref = getPublicOpenSpaceHref("/open-space");
+  const publicHref = getPublicOpenSpaceHref("/");
   const bounce = Boolean(publicHref && isLocalEditorHost());
 
   useEffect(() => {

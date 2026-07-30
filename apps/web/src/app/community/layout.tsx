@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Open Space",
-  description: "Browse and share Operate AI community workflows",
+  title: "Gallery",
+  description:
+    "Browse Operate AI community workflows. Open as new or star to reuse in your local editor.",
 };
 
 export default function CommunityLayout({

@@ -4,10 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ModelsModal } from "@/components/editor/ModelsModal";
+import { OpenSpaceLanding } from "@/components/open-space/OpenSpaceLanding";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { RotatingTagline } from "@/components/home/RotatingTagline";
-import { isLocalEditorHost, isPublicOpenSpaceSite } from "@/lib/open-space-url";
+import {
+  getPublicOpenSpaceHref,
+  isLocalEditorHost,
+  isPublicOpenSpaceSite,
+} from "@/lib/open-space-url";
 import { deleteWorkflow, fetchWorkflows } from "@/lib/workflow-api";
 import type { WorkflowSummary } from "@operate-ai/workflow-schema";
 
@@ -18,12 +23,14 @@ export default function HomePage() {
   const [starFlashKey, setStarFlashKey] = useState(0);
   const [modelsOpen, setModelsOpen] = useState(false);
 
+  const isPublic = isPublicOpenSpaceSite();
+
   useEffect(() => {
-    // Public Open Space host should not show the local editor home.
-    if (isPublicOpenSpaceSite() || !isLocalEditorHost()) {
+    // Non-local hosts that are not the public build still go to the gallery alias.
+    if (!isPublic && !isLocalEditorHost()) {
       window.location.replace("/open-space");
     }
-  }, []);
+  }, [isPublic]);
 
   const triggerStarFlash = () => {
     setStarFlashKey((key) => key + 1);
@@ -43,9 +50,9 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    if (isPublicOpenSpaceSite()) return;
+    if (isPublic) return;
     void loadWorkflows();
-  }, []);
+  }, [isPublic]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this workflow?")) return;
@@ -53,15 +60,20 @@ export default function HomePage() {
     await loadWorkflows();
   };
 
-  if (isPublicOpenSpaceSite()) {
-    return (
-      <p className="p-8 text-center text-sm text-muted">
-        Opening Open Space…
-      </p>
-    );
+  if (isPublic) {
+    return <OpenSpaceLanding />;
   }
 
   const isEmpty = !loading && !error && workflows.length === 0;
+  const publicOpenSpaceHref = getPublicOpenSpaceHref("/");
+  const openSpaceHref = publicOpenSpaceHref || "/community";
+  const openSpaceProps = publicOpenSpaceHref
+    ? {
+        href: openSpaceHref,
+        target: "_blank" as const,
+        rel: "noopener noreferrer",
+      }
+    : { href: openSpaceHref };
 
   return (
     <div className="space-backdrop min-h-screen">
@@ -112,31 +124,14 @@ export default function HomePage() {
                 New Workflow
               </Button>
             </Link>
-            {(() => {
-              const publicOpenSpace =
-                process.env.NEXT_PUBLIC_OPEN_SPACE_URL?.replace(/\/$/, "") ||
-                null;
-              const openSpaceHref = publicOpenSpace
-                ? `${publicOpenSpace}/open-space`
-                : "/community";
-              const openSpaceProps = publicOpenSpace
-                ? {
-                    href: openSpaceHref,
-                    target: "_blank" as const,
-                    rel: "noopener noreferrer",
-                  }
-                : { href: openSpaceHref };
-              return (
-                <a {...openSpaceProps}>
-                  <Button className="inline-flex items-center gap-2 !rounded-full border-0 bg-gradient-to-r from-slate-500 via-teal-600 to-cyan-700 px-6 py-2.5 shadow-[0_0_24px_rgba(45,212,191,0.28),0_0_40px_rgba(8,145,178,0.18)] transition duration-300 hover:shadow-[0_0_32px_rgba(45,212,191,0.4),0_0_52px_rgba(8,145,178,0.28)] hover:!opacity-100">
-                    <span className="material-icons text-[20px] leading-none">
-                      public
-                    </span>
-                    Open Space
-                  </Button>
-                </a>
-              );
-            })()}
+            <a {...openSpaceProps}>
+              <Button className="inline-flex items-center gap-2 !rounded-full border-0 bg-gradient-to-r from-slate-500 via-teal-600 to-cyan-700 px-6 py-2.5 shadow-[0_0_24px_rgba(45,212,191,0.28),0_0_40px_rgba(8,145,178,0.18)] transition duration-300 hover:shadow-[0_0_32px_rgba(45,212,191,0.4),0_0_52px_rgba(8,145,178,0.28)] hover:!opacity-100">
+                <span className="material-icons text-[20px] leading-none">
+                  public
+                </span>
+                Open Space
+              </Button>
+            </a>
           </div>
         </div>
 
@@ -151,14 +146,6 @@ export default function HomePage() {
               </p>
             )}
 
-            {/*
-              Columns by screen size (Tailwind breakpoints):
-              - default: 1
-              - sm (640px+): 2
-              - lg (1024px+): 3
-              - xl (1280px+): 4
-              Change grid-cols-* below to adjust.
-            */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {workflows.map((workflow) => (
                 <Card
@@ -170,7 +157,7 @@ export default function HomePage() {
                     {workflow.updatedAt &&
                       workflow.updatedAt !== workflow.createdAt && (
                         <p className="mt-1 text-xs text-muted">
-                          Updated at {" "}
+                          Updated at{" "}
                           {new Date(workflow.updatedAt).toLocaleString()}
                         </p>
                       )}
@@ -189,10 +176,10 @@ export default function HomePage() {
                   </div>
                   <div className="mt-auto flex gap-2">
                     <Link href={`/editor/${workflow.id}`}>
-                    <Button
-                      variant="secondary"
-                      className="!rounded-full px-4 transition duration-300 group-hover:!bg-slate-700 group-hover:shadow-[0_0_14px_rgba(56,189,248,0.28)] hover:-translate-y-0.5 hover:!bg-slate-700"
-                    >
+                      <Button
+                        variant="secondary"
+                        className="!rounded-full px-4 transition duration-300 group-hover:!bg-slate-700 group-hover:shadow-[0_0_14px_rgba(56,189,248,0.28)] hover:-translate-y-0.5 hover:!bg-slate-700"
+                      >
                         Open
                       </Button>
                     </Link>

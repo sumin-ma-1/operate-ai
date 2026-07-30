@@ -79,6 +79,40 @@ body {
   }
 }
 
+@keyframes os-landing-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes os-landing-ship {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.os-landing-fade {
+  animation: os-landing-fade 0.7s ease-out both;
+}
+
+.os-landing-ship {
+  animation: os-landing-ship 0.9s ease-out 0.15s both;
+}
+
+.os-landing-step {
+  animation: os-landing-fade 0.6s ease-out both;
+}
+
 .star-flash {
   position: absolute;
   top: 16%;

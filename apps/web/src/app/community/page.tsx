@@ -67,20 +67,28 @@ export default function CommunityPage() {
       <main className="relative z-10 mx-auto max-w-6xl px-8 pb-12 pt-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-sm text-muted transition hover:text-foreground"
+            {isLocalEditorHost() ? (
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 text-sm text-muted transition hover:text-foreground"
+              >
+                <span className="material-icons text-[18px] leading-none">
+                  arrow_back
+                </span>
+                Workflows
+              </Link>
+            ) : null}
+            <h1
+              className={`text-3xl font-bold ${
+                isLocalEditorHost() ? "mt-3" : ""
+              }`}
             >
-              <span className="material-icons text-[18px] leading-none">
-                arrow_back
-              </span>
-              Workflows
-            </Link>
-            <h1 className="mt-3 text-3xl font-bold">Open Space</h1>
+              Open Space
+            </h1>
             <p className="mt-1 max-w-xl text-sm text-muted">
-              Browse community workflows. Open as new for a private copy, or
-              Star to paste into an editor you already have open. Publishing
-              shares prompts publicly.
+              Browse community workflows. Open as new for a private copy in your
+              local editor, or Star to paste into an editor you already have
+              open. Publishing shares prompts publicly.
             </p>
           </div>
         </div>

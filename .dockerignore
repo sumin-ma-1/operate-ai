@@ -8,6 +8,7 @@ node_modules
 *.sqlite3
 .env
 .env.local
+**/.env.local
 deploy/open-space.env
 apps/web/.next
 **/*.log

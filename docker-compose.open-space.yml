@@ -53,6 +53,7 @@ services:
         NEXT_PUBLIC_COMMUNITY_API_URL: /community-backend
         NEXT_PUBLIC_LOCAL_EDITOR_URL: ${NEXT_PUBLIC_LOCAL_EDITOR_URL:-http://localhost:3000}
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        NEXT_PUBLIC_SITE_MODE: open-space
         API_PROXY_TARGET: http://api:8000
         COMMUNITY_API_PROXY_TARGET: http://api:8000
     container_name: operate-ai-web

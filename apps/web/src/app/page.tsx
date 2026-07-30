@@ -7,6 +7,7 @@ import { ModelsModal } from "@/components/editor/ModelsModal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { RotatingTagline } from "@/components/home/RotatingTagline";
+import { isLocalEditorHost, isPublicOpenSpaceSite } from "@/lib/open-space-url";
 import { deleteWorkflow, fetchWorkflows } from "@/lib/workflow-api";
 import type { WorkflowSummary } from "@operate-ai/workflow-schema";
 
@@ -16,6 +17,13 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [starFlashKey, setStarFlashKey] = useState(0);
   const [modelsOpen, setModelsOpen] = useState(false);
+
+  useEffect(() => {
+    // Public Open Space host should not show the local editor home.
+    if (isPublicOpenSpaceSite() || !isLocalEditorHost()) {
+      window.location.replace("/open-space");
+    }
+  }, []);
 
   const triggerStarFlash = () => {
     setStarFlashKey((key) => key + 1);
@@ -35,7 +43,8 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    loadWorkflows();
+    if (isPublicOpenSpaceSite()) return;
+    void loadWorkflows();
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -43,6 +52,14 @@ export default function HomePage() {
     await deleteWorkflow(id);
     await loadWorkflows();
   };
+
+  if (isPublicOpenSpaceSite()) {
+    return (
+      <p className="p-8 text-center text-sm text-muted">
+        Opening Open Space…
+      </p>
+    );
+  }
 
   const isEmpty = !loading && !error && workflows.length === 0;
 

@@ -12,9 +12,15 @@ export function getPublicOpenSpaceHref(path = "/open-space"): string | null {
   return `${base}${normalized}`;
 }
 
-/** True when this browser tab is the local editor, not the public Open Space host. */
+/** Built as the public Open Space host (Docker), not the local editor. */
+export function isPublicOpenSpaceSite(): boolean {
+  return process.env.NEXT_PUBLIC_SITE_MODE === "open-space";
+}
+
+/** True when this is the local editor (not the public Open Space host). */
 export function isLocalEditorHost(): boolean {
-  if (typeof window === "undefined") return false;
+  if (isPublicOpenSpaceSite()) return false;
+  if (typeof window === "undefined") return true;
   const host = window.location.hostname;
   return host === "localhost" || host === "127.0.0.1";
 }

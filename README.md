@@ -5,16 +5,18 @@
 
 <p align="center">
   A visual editor for easily building AI agents and LLM workflows.
-  <br> An open space for any agentic flow you envision.
-  <br> Check out [Open Space](https://stamp-floyd-usual-letter.trycloudflare.com/).
-</p>
-
-<p align="center">
-  A visual editor for easily building AI agents and LLM workflows.
   <br />
   An open space for any agentic flow you envision.
   <br />
   Check out <a href="https://stamp-floyd-usual-letter.trycloudflare.com/">Open Space</a>.
+</p>
+
+<p align="center">
+  <img
+    src="https://github.com/user-attachments/assets/e0c7f69c-9f89-43b2-b1b5-f3714e973a07"
+    alt="Operate AI preview"
+    width="900"
+  />
 </p>
 
 ## Overview

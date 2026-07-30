@@ -114,6 +114,16 @@ export default function CommunityDetailPage() {
 
   const handleToggleStar = () => {
     if (!post) return;
+
+    // Public Open Space → hand off to local editor (same idea as Open as new).
+    if (usePublicShell) {
+      const localEditorBase = getLocalEditorBaseUrl();
+      window.location.assign(
+        `${localEditorBase}/editor/star?postId=${encodeURIComponent(postId)}`
+      );
+      return;
+    }
+
     if (starred) {
       unstarWorkflow(post.id);
       setStarred(false);
@@ -216,10 +226,12 @@ export default function CommunityDetailPage() {
 
           <p className="mt-4 text-xs text-muted">
             <strong className="font-medium text-foreground/80">Open as new</strong>{" "}
-            creates a private workflow.{" "}
-            <strong className="font-medium text-foreground/80">Star</strong> keeps
-            a copy for the editor Add menu so you can paste it into the canvas
-            you are editing. Prompts in this post are public.
+            creates a private workflow in your local editor.{" "}
+            <strong className="font-medium text-foreground/80">Star</strong>{" "}
+            {usePublicShell
+              ? "opens the local editor and saves a copy for Add (+) → Starred."
+              : "keeps a copy for Add (+) → Starred so you can paste it onto an open canvas."}{" "}
+            Prompts in this post are public.
           </p>
 
           <div className="mt-4">
@@ -266,9 +278,9 @@ export default function CommunityDetailPage() {
               className="inline-flex items-center gap-1.5 !rounded-full px-4"
             >
               <span className="material-icons text-[18px] leading-none">
-                {starred ? "star" : "star_border"}
+                {usePublicShell || !starred ? "star_border" : "star"}
               </span>
-              {starred ? "Unstar" : "Star"}
+              {usePublicShell ? "Star in editor" : starred ? "Unstar" : "Star"}
             </Button>
             {googleIdToken ? (
               <Button

@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  <img
-    src="https://github.com/user-attachments/assets/e0c7f69c-9f89-43b2-b1b5-f3714e973a07"
-    alt="Operate AI preview"
-    width="900"
-  />
+  A visual editor for easily building AI agents and LLM workflows.
+  <br />
+  An open space for any agentic flow you envision.
+  <br />
+  Check out <a href="https://stamp-floyd-usual-letter.trycloudflare.com/">Open Space</a>.
 </p>
 
 ## Overview
@@ -131,8 +131,6 @@ LLM nodes pick a **provider + model**. Tools (**web search**, **generate image**
 | `COMMUNITY_PUBLISH_RATE_WINDOW_SECONDS` | `3600` | Rate-limit window (seconds) |
 
 Public Open Space deploy (Postgres + Docker + Nginx): see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
-
-Check out [Open Space](https://stamp-floyd-usual-letter.trycloudflare.com/).
 
 Browse and share workflows in **Open Space** (`/community` or `/open-space`): publish requires Google sign-in; delete is creator-only. “Open as new” sends the workflow to the local editor import route.
 

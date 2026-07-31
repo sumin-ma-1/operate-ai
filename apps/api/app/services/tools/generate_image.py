@@ -147,9 +147,10 @@ async def generate_image(
     if not images:
         raise ValueError("Forge returned no images")
 
-    raw = str(images[0])
+    raw = str(images[0]).strip()
     if "," in raw and raw.strip().startswith("data:"):
         raw = raw.split(",", 1)[1]
+    raw = "".join(raw.split())
 
     result: dict[str, Any] = {
         "ok": True,

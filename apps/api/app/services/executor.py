@@ -283,6 +283,9 @@ class DAGExecutor:
                                 # Stop reason, iterations, checker notes live in iterationLogs.
                                 output = event.get("output", "")
                                 iteration_logs = event.get("iterationLogs")
+                                generated = event.get("images") or []
+                                if generated:
+                                    node_images[node.id] = list(generated)
                             elif event["type"] == "node_failed":
                                 yield {
                                     "type": "failed",

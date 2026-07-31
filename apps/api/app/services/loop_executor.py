@@ -18,7 +18,8 @@ CHECKER_SYSTEM_PROMPT = (
     "Then write 1-3 short lines that are concrete and actionable:\n"
     "- If DONE: briefly confirm what makes the goal satisfied.\n"
     "- If CONTINUE: list what is still missing or wrong, and what the next "
-    "revision must fix or add. Avoid vague phrases like 'improve quality'."
+    "revision must fix or add. Avoid vague phrases like 'improve quality'.\n"
+    "If image(s) are attached, inspect them as part of judging the goal."
 )
 
 
@@ -164,6 +165,7 @@ class LoopExecutor:
         stop_reason = "Max iterations reached"
         completed_iterations = 0
         iteration_logs: list[dict[str, Any]] = []
+        loop_images: list[str] = []
 
         for iteration in range(1, max_iterations + 1):
             completed_iterations = iteration
@@ -248,6 +250,9 @@ class LoopExecutor:
                                 generated = event.get("images") or []
                                 if generated:
                                     iteration_images[inner_node.id] = list(generated)
+                                    for image in generated:
+                                        if image not in loop_images:
+                                            loop_images.append(image)
                                     count = len(generated)
                                     suffix = (
                                         f"\n\n[{count} generated image"
@@ -288,7 +293,7 @@ class LoopExecutor:
                     }
                 )
 
-                yield {
+                completed_event: dict[str, Any] = {
                     "type": "node_completed",
                     "nodeId": inner_node.id,
                     "nodeType": inner_node.type,
@@ -296,6 +301,9 @@ class LoopExecutor:
                     "loopId": loop_node.id,
                     "iteration": iteration,
                 }
+                if inner_node.id in iteration_images:
+                    completed_event["images"] = iteration_images[inner_node.id]
+                yield completed_event
 
             if _is_done_marker(last_output):
                 stop_reason = "Goal met (inner DONE marker)"
@@ -312,15 +320,26 @@ class LoopExecutor:
                 getattr(loop_node.data, "checker_provider", None) or "ollama"
             )
             checker_client = get_llm_client(checker_provider, loop_node.id)
+            checker_images: list[str] = []
+            for images in iteration_images.values():
+                for image in images:
+                    if image not in checker_images:
+                        checker_images.append(image)
+            image_note = (
+                f"\n\n{len(checker_images)} image(s) are attached for visual review."
+                if checker_images
+                else ""
+            )
             checker_output = await checker_client.chat(
                 model=checker_model,
                 user_message=(
-                    f"Goal:\n{goal}\n\nCurrent output:\n{last_output}\n\n"
+                    f"Goal:\n{goal}\n\nCurrent output:\n{last_output}{image_note}\n\n"
                     "First line must be DONE or CONTINUE.\n"
                     "Then explain concretely: if CONTINUE, what is missing and "
                     "what the next revision must change."
                 ),
                 system_message=CHECKER_SYSTEM_PROMPT,
+                images=checker_images or None,
             )
 
             verdict, body = _split_checker_response(checker_output)
@@ -368,4 +387,5 @@ class LoopExecutor:
             "output": last_output,
             "checkerFeedback": last_checker_feedback,
             "iterationLogs": iteration_logs,
+            **({"images": loop_images} if loop_images else {}),
         }

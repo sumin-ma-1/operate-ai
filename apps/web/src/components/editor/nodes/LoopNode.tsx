@@ -3,15 +3,22 @@
 import { Handle, NodeResizer, type Node, type NodeProps } from "@xyflow/react";
 
 import { NodeCardLabel } from "@/components/editor/nodes/NodeCardLabel";
+import { ResultImageGrid } from "@/components/editor/ResultImageGrid";
 import { Position } from "@/lib/flow";
 import { NODE_TYPE_LABELS } from "@/lib/node-labels";
+import { useWorkflowStore } from "@/stores/workflowStore";
 
 import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
 type LoopNodeType = Node<WorkflowNodeData, "loop">;
 
-export function LoopNode({ data, selected }: NodeProps<LoopNodeType>) {
+export function LoopNode({ id, data, selected }: NodeProps<LoopNodeType>) {
   const goal = data.goalPrompt?.trim();
+  const images = useWorkflowStore(
+    (state) =>
+      state.lastResult?.nodeResults.find((result) => result.nodeId === id)
+        ?.images
+  );
 
   return (
     <>
@@ -31,6 +38,11 @@ export function LoopNode({ data, selected }: NodeProps<LoopNodeType>) {
         <p className="mt-2 line-clamp-2 text-xs text-muted">
           {goal || "Set a goal to know when this loop should stop."}
         </p>
+        {images?.length ? (
+          <div className="pointer-events-auto mt-2">
+            <ResultImageGrid images={images} size="sm" />
+          </div>
+        ) : null}
         <p className="mt-auto text-[10px] uppercase tracking-wide text-muted/60">
           Max {data.maxIterations ?? 5} iterations
         </p>

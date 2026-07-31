@@ -12,11 +12,13 @@ import {
 import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
 import { NodeLogsList } from "@/components/editor/NodeLogsList";
 import { OutputActions } from "@/components/editor/OutputActions";
+import { ResultImageGrid } from "@/components/editor/ResultImageGrid";
 import { Button } from "@/components/ui/Button";
 import { ScrollFade } from "@/components/ui/ScrollFade";
 import { Textarea } from "@/components/ui/Textarea";
 import { useResizableHeight } from "@/hooks/useResizableHeight";
 import { getFinalOutputHeading } from "@/lib/node-labels";
+import { getFinalOutputImages } from "@/lib/result-images";
 import { submitApprovalDecision } from "@/lib/workflow-api";
 import { useWorkflowStore, type PendingApproval } from "@/stores/workflowStore";
 
@@ -157,6 +159,10 @@ function PanelBody({
   nodes: ReturnType<typeof useWorkflowStore.getState>["nodes"];
   workflowName: string;
 }) {
+  const finalImages = lastResult
+    ? getFinalOutputImages(lastResult.nodeResults)
+    : [];
+
   return (
     <div className="space-y-4">
       {executionError && (
@@ -189,6 +195,13 @@ function PanelBody({
             <pre className="mt-2 overflow-auto rounded-lg border border-border/60 bg-background/80 p-3 text-sm whitespace-pre-wrap scrollbar-none">
               {lastResult.finalOutput || "(empty)"}
             </pre>
+            {finalImages.length > 0 ? (
+              <ResultImageGrid
+                images={finalImages}
+                size="md"
+                className="mt-2"
+              />
+            ) : null}
           </section>
 
           <section>

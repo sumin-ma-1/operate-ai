@@ -6,10 +6,12 @@ import { ExecutionProgress } from "@/components/editor/ExecutionProgress";
 import { NodeLogsList } from "@/components/editor/NodeLogsList";
 import { ResizeHandle } from "@/components/editor/ResizeHandle";
 import { OutputActions } from "@/components/editor/OutputActions";
+import { ResultImageGrid } from "@/components/editor/ResultImageGrid";
 import { Button } from "@/components/ui/Button";
 import { useResizableWidth } from "@/hooks/useResizableWidth";
 import { getExecutionMessage, getExecutionOrder } from "@/lib/execution-order";
 import { getFinalOutputHeading } from "@/lib/node-labels";
+import { getFinalOutputImages } from "@/lib/result-images";
 import { executeWorkflowStream } from "@/lib/workflow-api";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
@@ -41,6 +43,9 @@ export function RunPanel() {
 
   const inputNode = nodes.find((node) => node.type === "input");
   const inputValue = inputNode?.data.value || "";
+  const finalImages = lastResult
+    ? getFinalOutputImages(lastResult.nodeResults)
+    : [];
 
   const handleRun = async () => {
     setError(null);
@@ -210,6 +215,13 @@ export function RunPanel() {
               <pre className="scrollbar-none mt-2 max-h-80 overflow-auto rounded-md border border-border bg-background p-3 text-sm whitespace-pre-wrap">
                 {lastResult.finalOutput || "(empty)"}
               </pre>
+              {finalImages.length > 0 ? (
+                <ResultImageGrid
+                  images={finalImages}
+                  size="md"
+                  className="mt-2"
+                />
+              ) : null}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col">

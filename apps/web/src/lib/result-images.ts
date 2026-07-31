@@ -2,9 +2,15 @@
 export function toImageDataUrl(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.startsWith("data:")) {
-    return trimmed;
+    const comma = trimmed.indexOf(",");
+    if (comma === -1) {
+      return trimmed;
+    }
+    const meta = trimmed.slice(0, comma + 1);
+    const payload = trimmed.slice(comma + 1).replace(/\s+/g, "");
+    return `${meta}${payload}`;
   }
-  return `data:image/png;base64,${trimmed}`;
+  return `data:image/png;base64,${trimmed.replace(/\s+/g, "")}`;
 }
 
 export function openImageInNewTab(raw: string): void {
@@ -17,4 +23,19 @@ export function openImageInNewTab(raw: string): void {
     link.rel = "noopener";
     link.click();
   }
+}
+
+/** Prefer Output node images, else the last node result that has any. */
+export function getFinalOutputImages(
+  nodeResults: { nodeType: string; images?: string[] }[]
+): string[] {
+  const reversed = [...nodeResults].reverse();
+  const fromOutput = reversed.find(
+    (result) => result.nodeType === "output" && result.images?.length
+  );
+  if (fromOutput?.images?.length) {
+    return fromOutput.images;
+  }
+  const any = reversed.find((result) => result.images?.length);
+  return any?.images ?? [];
 }

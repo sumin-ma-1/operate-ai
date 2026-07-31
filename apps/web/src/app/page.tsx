@@ -88,9 +88,11 @@ export default function HomePage() {
         onClick={() => setModelsOpen(true)}
         title="Keys"
         aria-label="Keys"
-        className="fixed top-5 left-5 z-20 inline-flex !h-11 !w-11 items-center justify-center !rounded-full border-0 !bg-transparent !p-0 text-white/55 shadow-none transition duration-300 hover:!bg-white/10 hover:text-white hover:shadow-[0_0_22px_rgba(148,163,184,0.2)] hover:!opacity-100"
+        className="group fixed top-5 left-5 z-20 inline-flex !h-11 !w-11 items-center justify-center !rounded-full border-0 !bg-transparent !p-0 shadow-none hover:!bg-transparent hover:!opacity-100"
       >
-        <span className="material-icons text-[22px] leading-none">key</span>
+        <span className="material-symbols-outlined text-[22px] leading-none text-white/55 transition duration-300 group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.45)]">
+          planet
+        </span>
       </Button>
       <main
         className={`relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-8 ${

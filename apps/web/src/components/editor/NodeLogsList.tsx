@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ResultImageGrid } from "@/components/editor/ResultImageGrid";
 import { getNodeTypeLabel } from "@/lib/node-labels";
 import type {
   LoopIterationLog,
@@ -124,6 +125,9 @@ function NodeLogEntry({
           <pre className="overflow-auto whitespace-pre-wrap text-xs text-muted scrollbar-none">
             {result.output || "(empty)"}
           </pre>
+          {result.images?.length ? (
+            <ResultImageGrid images={result.images} size="md" />
+          ) : null}
           {iterationLogs.length > 0 ? (
             <div className="space-y-1.5">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted">

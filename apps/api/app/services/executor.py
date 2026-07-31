@@ -169,6 +169,7 @@ class DAGExecutor:
 
                 output = ""
                 iteration_logs = None
+                active_edges = self._active_edges(workflow.edges)
 
                 if node.type == "input":
                     try:
@@ -194,7 +195,6 @@ class DAGExecutor:
                         return
 
                 elif node.type == "llm":
-                    active_edges = self._active_edges(workflow.edges)
                     upstream_output = self._get_upstream_output(
                         node.id, workflow.edges, node_outputs
                     )
@@ -351,13 +351,24 @@ class DAGExecutor:
                     output = self._get_upstream_output(
                         node.id, workflow.edges, node_outputs
                     )
+                    upstream_imgs = collect_upstream_images(
+                        node.id,
+                        workflow.nodes,
+                        workflow.edges,
+                        active_edges,
+                        node_images,
+                    )
+                    if upstream_imgs:
+                        node_images[node.id] = list(upstream_imgs)
 
+                result_images = node_images.get(node.id)
                 node_outputs[node.id] = output
                 result = NodeExecutionResult(
                     nodeId=node.id,
                     nodeType=node.type,
                     output=output,
                     iterationLogs=iteration_logs,
+                    images=result_images,
                 )
                 node_results.append(result)
                 final_output = output
@@ -370,8 +381,8 @@ class DAGExecutor:
                 }
                 if iteration_logs is not None:
                     completed_event["iterationLogs"] = iteration_logs
-                if node.id in node_images:
-                    completed_event["images"] = node_images[node.id]
+                if result_images:
+                    completed_event["images"] = result_images
                 yield completed_event
 
             yield {
@@ -408,6 +419,7 @@ class DAGExecutor:
                         nodeType=event["nodeType"],
                         output=event.get("output", ""),
                         iterationLogs=event.get("iterationLogs"),
+                        images=event.get("images"),
                     )
                 )
                 final_output = event.get("output", "")

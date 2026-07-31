@@ -119,6 +119,8 @@ export interface NodeExecutionResult {
   output: string;
   /** Agent loop: per-iteration inner node outputs */
   iterationLogs?: LoopIterationLog[];
+  /** Raw base64 PNG/JPEG from generate_image (no data: prefix); not persisted in workflows */
+  images?: string[];
 }
 
 export interface ExecuteWorkflowResponse {

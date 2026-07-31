@@ -59,7 +59,7 @@ export function Toast({
   const positionClass =
     placement === "center"
       ? "fixed inset-0 z-[100] flex items-center justify-center p-4"
-      : "fixed left-1/2 top-[4.75rem] z-[100] w-full max-w-md -translate-x-1/2 px-4";
+      : "fixed left-1/2 top-[4.75rem] z-[100] -translate-x-1/2 px-4";
 
   const motionClass =
     placement === "center"
@@ -87,20 +87,22 @@ export function Toast({
         />
       ) : null}
       <div
-        className={`relative w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/95 px-4 py-3.5 text-sm text-foreground shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
-          hasActions ? "" : "pointer-events-none"
-        }`}
+        className={`relative w-auto max-w-md border border-white/10 bg-slate-950/95 px-5 py-3.5 text-sm text-foreground shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md ${
+          hasActions ? "min-w-[18rem] rounded-3xl" : "rounded-full"
+        } ${hasActions ? "" : "pointer-events-none"}`}
       >
-        <div className="flex items-start gap-3">
+        <div
+          className={`flex gap-3 ${hasActions ? "items-start" : "items-center"}`}
+        >
           <span
-            className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconTone}`}
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconTone}`}
           >
             <span className="material-icons text-[18px] leading-none">
               {icon}
             </span>
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] leading-relaxed text-foreground/90">
+            <p className="text-[13px] leading-snug text-foreground/90">
               {message}
             </p>
             {hasActions ? (

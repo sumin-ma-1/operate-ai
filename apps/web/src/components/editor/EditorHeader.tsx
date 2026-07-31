@@ -135,6 +135,7 @@ export function EditorHeader() {
         <Toast
           message={toast.message}
           variant={toast.variant}
+          placement="center"
           onClose={clearToast}
         />
       )}

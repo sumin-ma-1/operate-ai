@@ -123,6 +123,7 @@ class NodeExecutionResult(BaseModel):
     iteration_logs: Optional[list[LoopIterationLog]] = Field(
         default=None, alias="iterationLogs"
     )
+    images: Optional[list[str]] = None
 
     model_config = {"populate_by_name": True}
 

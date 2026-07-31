@@ -5,6 +5,8 @@ import { Handle, type Node, type NodeProps } from "@xyflow/react";
 import { Position } from "@/lib/flow";
 
 import { NodeCardLabel } from "@/components/editor/nodes/NodeCardLabel";
+import { ResultImageGrid } from "@/components/editor/ResultImageGrid";
+import { useWorkflowStore } from "@/stores/workflowStore";
 
 import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
@@ -19,9 +21,14 @@ const TOOL_META: Record<string, { label: string; icon: string }> = {
 const chipClass =
   "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide";
 
-export function LlmNode({ data }: NodeProps<LlmNodeType>) {
+export function LlmNode({ id, data }: NodeProps<LlmNodeType>) {
   const model = data.model || "gemma4:e4b";
   const tools = data.enabledTools || [];
+  const images = useWorkflowStore(
+    (state) =>
+      state.lastResult?.nodeResults.find((result) => result.nodeId === id)
+        ?.images
+  );
 
   return (
     <div className="box-border w-full max-w-full overflow-hidden p-3 text-left">
@@ -59,6 +66,9 @@ export function LlmNode({ data }: NodeProps<LlmNodeType>) {
           );
         })}
       </div>
+      {images?.length ? (
+        <ResultImageGrid images={images} size="sm" className="mt-2" />
+      ) : null}
       <Handle type="source" position={Position.Right} />
     </div>
   );

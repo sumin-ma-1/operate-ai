@@ -6,12 +6,20 @@ import { END_POINT_EMPTY_PLACEHOLDER, getNodeTypeLabel } from "@/lib/node-labels
 import { Position } from "@/lib/flow";
 
 import { NodeCardLabel } from "@/components/editor/nodes/NodeCardLabel";
+import { ResultImageGrid } from "@/components/editor/ResultImageGrid";
+import { useWorkflowStore } from "@/stores/workflowStore";
 
 import type { WorkflowNodeData } from "@operate-ai/workflow-schema";
 
 type OutputNodeType = Node<WorkflowNodeData, "output">;
 
-export function OutputNode({ data }: NodeProps<OutputNodeType>) {
+export function OutputNode({ id, data }: NodeProps<OutputNodeType>) {
+  const images = useWorkflowStore(
+    (state) =>
+      state.lastResult?.nodeResults.find((result) => result.nodeId === id)
+        ?.images
+  );
+
   return (
     <div className="box-border w-full max-w-full overflow-hidden p-3 text-left">
       <Handle type="target" position={Position.Left} />
@@ -22,6 +30,9 @@ export function OutputNode({ data }: NodeProps<OutputNodeType>) {
       <p className="mt-2 max-w-full overflow-hidden break-words text-xs text-muted [overflow-wrap:anywhere] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:4]">
         {data.result || END_POINT_EMPTY_PLACEHOLDER}
       </p>
+      {images?.length ? (
+        <ResultImageGrid images={images} size="sm" className="mt-2" />
+      ) : null}
     </div>
   );
 }

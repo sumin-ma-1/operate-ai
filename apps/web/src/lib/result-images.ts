@@ -13,16 +13,32 @@ export function toImageDataUrl(raw: string): string {
   return `data:image/png;base64,${trimmed.replace(/\s+/g, "")}`;
 }
 
-export function openImageInNewTab(raw: string): void {
+export function downloadImage(
+  raw: string,
+  filename = "generated-image.png"
+): void {
   const url = toImageDataUrl(raw);
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "generated-image.png";
-    link.rel = "noopener";
-    link.click();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+export async function copyImageToClipboard(raw: string): Promise<void> {
+  const url = toImageDataUrl(raw);
+  const response = await fetch(url);
+  const blob = await response.blob();
+  const type = blob.type || "image/png";
+
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+    return;
   }
+
+  throw new Error("Clipboard image copy is not supported in this browser");
 }
 
 /** Prefer Output node images, else the last node result that has any. */

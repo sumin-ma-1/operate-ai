@@ -21,9 +21,12 @@ export function getLocalEditorBaseUrl(): string {
 }
 
 /**
- * Probe whether the local editor responds. Uses `no-cors` so a public HTTPS
- * Open Space page can check `http://localhost` without CORS headers.
- * Connection refused / timeout → false.
+ * Probe whether the local editor responds.
+ *
+ * Unreliable from a **public HTTPS** Open Space page: Chrome/Edge block
+ * private-network (`localhost`) fetches even when the editor is running
+ * (Private Network Access). Prefer top-level navigation for Open as new / Star
+ * instead of gating on this probe.
  */
 export async function isLocalEditorReachable(
   baseUrl = getLocalEditorBaseUrl(),

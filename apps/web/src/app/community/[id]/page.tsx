@@ -20,7 +20,6 @@ import {
   getLocalEditorBaseUrl,
   getPublicOpenSpaceHref,
   isLocalEditorHost,
-  isLocalEditorReachable,
   isPublicOpenSpaceSite,
 } from "@/lib/open-space-url";
 import {
@@ -193,18 +192,10 @@ export default function CommunityDetailPage() {
   const handleOpenAsNew = async () => {
     setForking(true);
     setError(null);
+    // Do not probe localhost with fetch from public HTTPS — browsers block
+    // private-network requests, so a live editor looks "down". Top-level
+    // navigation to the local editor still works when it is running.
     const localEditorBase = getLocalEditorBaseUrl();
-    const reachable = await isLocalEditorReachable(localEditorBase);
-    if (!reachable) {
-      setForking(false);
-      setToast({
-        message:
-          "Local editor is not running. Start Operate AI (localhost:3000), then try again.",
-        variant: "error",
-        durationMs: 4200,
-      });
-      return;
-    }
     const target = `${localEditorBase}/editor/import?postId=${encodeURIComponent(
       postId
     )}`;
@@ -217,16 +208,6 @@ export default function CommunityDetailPage() {
     // Public Open Space → hand off to local editor (same idea as Open as new).
     if (usePublicShell) {
       const localEditorBase = getLocalEditorBaseUrl();
-      const reachable = await isLocalEditorReachable(localEditorBase);
-      if (!reachable) {
-        setToast({
-          message:
-            "Local editor is not running. Start Operate AI (localhost:3000), then try again.",
-          variant: "error",
-          durationMs: 4200,
-        });
-        return;
-      }
       window.location.assign(
         `${localEditorBase}/editor/star?postId=${encodeURIComponent(postId)}`
       );

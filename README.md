@@ -20,7 +20,7 @@
 ## Download
 
 - **Editor:** clone this repo and run from source ([Run from source](#run-from-source)).
-- **Open Space:** browse shared workflows at [Open Space](https://tab-resolution-put-championships.trycloudflare.com/).
+- **Open Space:** browse shared workflows at [Open Space](https://oxide-optimum-rising-advertisement.trycloudflare.com/).
 
 ## How it works
 

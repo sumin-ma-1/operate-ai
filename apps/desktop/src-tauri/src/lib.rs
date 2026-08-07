@@ -54,10 +54,15 @@ fn local_data_dir() -> PathBuf {
     PathBuf::from("operate-ai-data")
 }
 
+const WEB_BUNDLE_MARKER: &str = "0.1.2";
+
 fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
     let dest = local_data_dir().join("web");
     let marker = dest.join(".bundle-ok");
-    if marker.exists() && dest.join("node.exe").exists() {
+    let marker_ok = std::fs::read_to_string(&marker)
+        .map(|s| s.trim() == WEB_BUNDLE_MARKER)
+        .unwrap_or(false);
+    if marker_ok && dest.join("node.exe").exists() {
         return Ok(dest);
     }
 
@@ -91,7 +96,8 @@ fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
         return Err("tar failed to extract web.zip".into());
     }
 
-    std::fs::write(&marker, b"1").map_err(|e| format!("write web marker: {e}"))?;
+    std::fs::write(&marker, WEB_BUNDLE_MARKER.as_bytes())
+        .map_err(|e| format!("write web marker: {e}"))?;
     Ok(dest)
 }
 
@@ -200,6 +206,11 @@ fn spawn_web_release(sidecar: &Path) -> Result<Child, String> {
         return Err(format!("Bundled Node not found at {}", node.display()));
     }
 
+    let log_dir = local_data_dir();
+    let _ = std::fs::create_dir_all(&log_dir);
+    let stdout_log = std::fs::File::create(log_dir.join("web-stdout.log")).ok();
+    let stderr_log = std::fs::File::create(log_dir.join("web-stderr.log")).ok();
+
     // Prefer Next standalone server.js when present; otherwise `next start` from pnpm deploy.
     let standalone = web_dir.join("server.js");
     let mut cmd = Command::new(&node);
@@ -221,8 +232,8 @@ fn spawn_web_release(sidecar: &Path) -> Result<Child, String> {
         .env("PORT", "3000")
         .env("HOSTNAME", "127.0.0.1")
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(stdout_log.map(Stdio::from).unwrap_or_else(Stdio::null))
+        .stderr(stderr_log.map(Stdio::from).unwrap_or_else(Stdio::null));
     apply_no_window(&mut cmd);
     cmd.spawn()
         .map_err(|e| format!("Failed to start bundled web: {e}"))
@@ -287,7 +298,21 @@ fn start_servers(app: &AppHandle, state: &ServerState) -> Result<(), String> {
         return Err("API did not become ready on :8000".into());
     }
     if !wait_for_port(3000, Duration::from_secs(90)) {
-        return Err("Web did not become ready on :3000".into());
+        let hint = std::fs::read_to_string(local_data_dir().join("web-stderr.log"))
+            .ok()
+            .map(|s| {
+                s.lines()
+                    .rev()
+                    .find(|l| !l.trim().is_empty())
+                    .unwrap_or("")
+                    .chars()
+                    .take(160)
+                    .collect::<String>()
+            })
+            .filter(|s| !s.is_empty())
+            .map(|s| format!(" — {s}"))
+            .unwrap_or_default();
+        return Err(format!("Web did not become ready on :3000{hint}"));
     }
     Ok(())
 }

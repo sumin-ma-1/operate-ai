@@ -5,7 +5,7 @@
 
 .DESCRIPTION
   1. Build shared schema + Next web
-  2. pnpm deploy web + copy .next/public + portable node.exe → resources/sidecar/web
+  2. pnpm deploy web, hoist .pnpm deps, copy .next/public + portable node.exe → web.zip
   3. PyInstaller-bundle the API → resources/sidecar/api
   4. tauri build --bundles nsis
 
@@ -70,12 +70,58 @@ try {
   pnpm --filter=@operate-ai/web deploy --prod --legacy $deployTmp
   if ($LASTEXITCODE -ne 0) { throw "pnpm deploy failed" }
 
-  cmd /c "robocopy `"$deployTmp`" `"$webStage`" /E /NFL /NDL /NJH /NJS /nc /ns /np"
+  # pnpm deploy keeps transitive deps under node_modules/.pnpm only. Next's
+  # require-hook resolves packages like styled-jsx from the project root, so
+  # hoist every package from the virtual store to top-level node_modules.
+  $deployNm = Join-Path $deployTmp "node_modules"
+  $deployPnpm = Join-Path $deployNm ".pnpm"
+  if (Test-Path $deployPnpm) {
+    Write-Host " hoisting pnpm virtual store → top-level node_modules"
+    Get-ChildItem -LiteralPath $deployPnpm -Directory | ForEach-Object {
+      $inner = Join-Path $_.FullName "node_modules"
+      if (-not (Test-Path -LiteralPath $inner)) { return }
+      Get-ChildItem -LiteralPath $inner -Force | ForEach-Object {
+        if ($_.Name -eq ".bin") { return }
+        if ($_.Name.StartsWith("@")) {
+          $scope = $_.Name
+          Get-ChildItem -LiteralPath $_.FullName -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $dest = Join-Path $deployNm (Join-Path $scope $_.Name)
+            if (-not (Test-Path -LiteralPath $dest)) {
+              New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+              cmd /c "robocopy `"$($_.FullName)`" `"$dest`" /E /NFL /NDL /NJH /NJS /nc /ns /np" | Out-Null
+            }
+          }
+        } else {
+          $dest = Join-Path $deployNm $_.Name
+          if (-not (Test-Path -LiteralPath $dest)) {
+            cmd /c "robocopy `"$($_.FullName)`" `"$dest`" /E /NFL /NDL /NJH /NJS /nc /ns /np" | Out-Null
+          }
+        }
+      }
+    }
+  }
+
+  # Drop Next build cache from deploy copy (huge, not needed at runtime).
+  $deployCache = Join-Path $deployTmp ".next\cache"
+  if (Test-Path $deployCache) {
+    cmd /c "rmdir /s /q `"$deployCache`""
+  }
+
+  cmd /c "robocopy `"$deployTmp`" `"$webStage`" /E /XD cache /NFL /NDL /NJH /NJS /nc /ns /np"
   if ($LASTEXITCODE -ge 8) { throw "robocopy deploy→stage failed ($LASTEXITCODE)" }
-  Copy-Item -Recurse -Force $nextDir (Join-Path $webStage ".next")
+
+  # Always use the freshly built .next (avoid nested .next/.next from Copy-Item).
+  $nextDst = Join-Path $webStage ".next"
+  if (Test-Path $nextDst) { cmd /c "rmdir /s /q `"$nextDst`"" }
+  New-Item -ItemType Directory -Force -Path $nextDst | Out-Null
+  cmd /c "robocopy `"$nextDir`" `"$nextDst`" /E /XD cache /NFL /NDL /NJH /NJS /nc /ns /np"
+  if ($LASTEXITCODE -ge 8) { throw "robocopy .next→stage failed ($LASTEXITCODE)" }
+
   $publicSrc = Join-Path $Root "apps\web\public"
   if (Test-Path $publicSrc) {
-    Copy-Item -Recurse -Force $publicSrc (Join-Path $webStage "public")
+    $publicDst = Join-Path $webStage "public"
+    if (Test-Path $publicDst) { cmd /c "rmdir /s /q `"$publicDst`"" }
+    Copy-Item -Recurse -Force $publicSrc $publicDst
   }
 
   # Drop type/map junk that only deepens paths for the installer.
@@ -86,6 +132,10 @@ try {
   $nextBin = Join-Path $webStage "node_modules\next\dist\bin\next"
   if (-not (Test-Path $nextBin)) {
     throw "next binary missing after deploy under $webStage"
+  }
+  $styledJsx = Join-Path $webStage "node_modules\styled-jsx\package.json"
+  if (-not (Test-Path $styledJsx)) {
+    throw "styled-jsx missing after hoist — Next will fail to start"
   }
 
   $cache = Join-Path $Here ".cache"

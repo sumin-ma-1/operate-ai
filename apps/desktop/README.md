@@ -34,7 +34,7 @@ apps/api/.venv/Scripts/pip install -r apps/api/requirements.txt pyinstaller
 pnpm desktop:build
 ```
 
-This runs [`packaging/build_windows.ps1`](../../packaging/build_windows.ps1): Next standalone + portable Node, PyInstaller API sidecar, then Tauri NSIS.
+This runs [`packaging/build_windows.ps1`](../../packaging/build_windows.ps1): Next web via `pnpm deploy` (zipped as `web.zip` to avoid Windows path limits), PyInstaller API sidecar, then Tauri NSIS. On first launch the app extracts the web bundle under `%LOCALAPPDATA%\OperateAI\web`.
 
 Output: `apps/desktop/src-tauri/target/release/bundle/nsis/`.
 

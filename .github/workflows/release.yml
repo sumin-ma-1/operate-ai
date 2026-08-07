@@ -1,0 +1,75 @@
+# Desktop release — Windows NSIS with bundled API + web sidecars.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install API deps + PyInstaller
+        shell: pwsh
+        run: |
+          python -m venv apps/api/.venv
+          apps/api/.venv/Scripts/python -m pip install --upgrade pip
+          apps/api/.venv/Scripts/pip install -r apps/api/requirements.txt pyinstaller
+
+      - name: Install JS deps
+        run: pnpm install
+
+      - name: Build Windows installer
+        shell: pwsh
+        env:
+          CI: true
+        run: ./packaging/build_windows.ps1
+
+      - name: Stage setup.exe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $nsis = Get-ChildItem -Path apps/desktop/src-tauri/target/release/bundle/nsis -Filter "*-setup.exe" |
+            Select-Object -First 1
+          if (-not $nsis) {
+            throw "NSIS setup.exe not found"
+          }
+          Copy-Item $nsis.FullName dist/Operate-AI-windows-setup.exe
+          Get-Item dist/Operate-AI-windows-setup.exe | Format-List Name, Length, FullName
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Operate-AI-windows-setup
+          path: dist/Operate-AI-windows-setup.exe
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Operate-AI-windows-setup.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

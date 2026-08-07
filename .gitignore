@@ -15,5 +15,13 @@ apps/api/data/community.sqlite3
 apps/api/data/community.sqlite3-*
 apps/api/data/secrets.json
 apps/api/data/forge_settings.json
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/resources/sidecar/api/
+apps/desktop/src-tauri/resources/sidecar/web/
+apps/desktop/src-tauri/resources/sidecar/web.zip
+packaging/dist/
+packaging/build/
+packaging/.cache/
+dist/
 .DS_Store
 *.log

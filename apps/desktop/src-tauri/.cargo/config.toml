@@ -1,0 +1,5 @@
+[build]
+# Keep artifacts in-repo (avoid Cursor sandbox CARGO_TARGET_DIR corruption).
+target-dir = "target"
+# Parallel builds have hit intermittent rustc "metadata stub" errors on this host.
+jobs = 1

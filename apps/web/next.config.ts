@@ -8,7 +8,9 @@ const COMMUNITY_API_ORIGIN =
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@operate-ai/workflow-schema"],
-  output: "standalone",
+  // Avoid Next `output: "standalone"` here: on Windows without Developer Mode,
+  // standalone staging uses symlinks and fails with EPERM. Packaging uses
+  // `pnpm deploy` + `.next` instead (see packaging/build_windows.ps1).
   devIndicators: false,
   async rewrites() {
     return [

@@ -1,0 +1,341 @@
+// Operate AI desktop shell: start local API + web, then open them in the window.
+use std::net::TcpStream;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
+
+use tauri::{AppHandle, Manager, RunEvent, Url, WindowEvent};
+
+struct ServerState {
+    children: Mutex<Vec<Child>>,
+}
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."))
+}
+
+fn port_open(port: u16) -> bool {
+    TcpStream::connect(("127.0.0.1", port)).is_ok()
+}
+
+fn wait_for_port(port: u16, timeout: Duration) -> bool {
+    let start = std::time::Instant::now();
+    while start.elapsed() < timeout {
+        if port_open(port) {
+            return true;
+        }
+        thread::sleep(Duration::from_millis(400));
+    }
+    false
+}
+
+#[cfg(windows)]
+fn apply_no_window(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn apply_no_window(_cmd: &mut Command) {}
+
+fn local_data_dir() -> PathBuf {
+    if let Ok(base) = std::env::var("LOCALAPPDATA") {
+        return PathBuf::from(base).join("OperateAI");
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return PathBuf::from(home).join(".operate-ai");
+    }
+    PathBuf::from("operate-ai-data")
+}
+
+fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
+    let dest = local_data_dir().join("web");
+    let marker = dest.join(".bundle-ok");
+    if marker.exists() && dest.join("node.exe").exists() {
+        return Ok(dest);
+    }
+
+    let zip = sidecar.join("web.zip");
+    if !zip.exists() {
+        // Dev-style layout: unzipped web folder next to api.
+        let loose = sidecar.join("web");
+        if loose.join("node.exe").exists() {
+            return Ok(loose);
+        }
+        return Err(format!("Bundled web.zip not found at {}", zip.display()));
+    }
+
+    if dest.exists() {
+        let _ = std::fs::remove_dir_all(&dest);
+    }
+    std::fs::create_dir_all(&dest).map_err(|e| format!("create web dir: {e}"))?;
+
+    let status = Command::new("tar")
+        .args([
+            "-xf",
+            zip.to_str().ok_or("web.zip path is not valid UTF-8")?,
+            "-C",
+            dest.to_str().ok_or("web dest path is not valid UTF-8")?,
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|e| format!("Failed to extract web.zip (is tar available?): {e}"))?;
+    if !status.success() {
+        return Err("tar failed to extract web.zip".into());
+    }
+
+    std::fs::write(&marker, b"1").map_err(|e| format!("write web marker: {e}"))?;
+    Ok(dest)
+}
+
+fn resource_sidecar(app: &AppHandle) -> Result<PathBuf, String> {
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("resource dir: {e}"))?;
+    Ok(resource_dir.join("sidecar"))
+}
+
+fn spawn_api_dev(root: &Path) -> Result<Child, String> {
+    let python = if cfg!(windows) {
+        root.join("apps/api/.venv/Scripts/python.exe")
+    } else {
+        root.join("apps/api/.venv/bin/python")
+    };
+    if !python.exists() {
+        return Err(format!(
+            "API Python venv not found at {}. Create it under apps/api first.",
+            python.display()
+        ));
+    }
+
+    let mut cmd = Command::new(&python);
+    cmd.args([
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+    ])
+    .current_dir(root.join("apps/api"))
+    .stdin(Stdio::null())
+    .stdout(Stdio::null())
+    .stderr(Stdio::null());
+    apply_no_window(&mut cmd);
+    cmd.spawn()
+        .map_err(|e| format!("Failed to start API: {e}"))
+}
+
+fn spawn_web_dev(root: &Path) -> Result<Child, String> {
+    let mut cmd = if cfg!(windows) {
+        let mut c = Command::new("cmd");
+        c.arg("/C");
+        c.args([
+            "pnpm",
+            "--filter",
+            "@operate-ai/web",
+            "exec",
+            "next",
+            "dev",
+            "--port",
+            "3000",
+        ]);
+        c
+    } else {
+        let mut c = Command::new("pnpm");
+        c.args([
+            "--filter",
+            "@operate-ai/web",
+            "exec",
+            "next",
+            "dev",
+            "--port",
+            "3000",
+        ]);
+        c
+    };
+
+    cmd.current_dir(root)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    apply_no_window(&mut cmd);
+    cmd.spawn()
+        .map_err(|e| format!("Failed to start web (is pnpm on PATH?): {e}"))
+}
+
+fn spawn_api_release(sidecar: &Path) -> Result<Child, String> {
+    let exe = sidecar.join("api").join("operate-ai-api.exe");
+    if !exe.exists() {
+        return Err(format!("Bundled API not found at {}", exe.display()));
+    }
+    let data = local_data_dir();
+    let _ = std::fs::create_dir_all(&data);
+
+    let mut cmd = Command::new(&exe);
+    cmd.env("OPERATE_AI_DATA", &data)
+        .env("PORT", "8000")
+        .current_dir(exe.parent().unwrap_or(sidecar))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    apply_no_window(&mut cmd);
+    cmd.spawn()
+        .map_err(|e| format!("Failed to start bundled API: {e}"))
+}
+
+fn spawn_web_release(sidecar: &Path) -> Result<Child, String> {
+    let web_dir = ensure_web_dir(sidecar)?;
+    let node = web_dir.join("node.exe");
+    if !node.exists() {
+        return Err(format!("Bundled Node not found at {}", node.display()));
+    }
+
+    // Prefer Next standalone server.js when present; otherwise `next start` from pnpm deploy.
+    let standalone = web_dir.join("server.js");
+    let mut cmd = Command::new(&node);
+    if standalone.exists() {
+        cmd.arg("server.js");
+    } else {
+        let next_bin = web_dir.join("node_modules/next/dist/bin/next");
+        if !next_bin.exists() {
+            return Err(format!(
+                "Bundled Next not found at {} (and no server.js)",
+                next_bin.display()
+            ));
+        }
+        cmd.arg(next_bin)
+            .args(["start", "--hostname", "127.0.0.1", "--port", "3000"]);
+    }
+
+    cmd.current_dir(&web_dir)
+        .env("PORT", "3000")
+        .env("HOSTNAME", "127.0.0.1")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    apply_no_window(&mut cmd);
+    cmd.spawn()
+        .map_err(|e| format!("Failed to start bundled web: {e}"))
+}
+
+fn kill_child(child: &mut Child) {
+    let pid = child.id();
+    #[cfg(windows)]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
+fn shutdown_servers(state: &ServerState) {
+    if let Ok(mut children) = state.children.lock() {
+        for child in children.iter_mut() {
+            kill_child(child);
+        }
+        children.clear();
+    }
+}
+
+fn start_servers(app: &AppHandle, state: &ServerState) -> Result<(), String> {
+    if port_open(8000) && port_open(3000) {
+        return Ok(());
+    }
+
+    let mut kids = state
+        .children
+        .lock()
+        .map_err(|_| "server state lock poisoned".to_string())?;
+
+    if cfg!(debug_assertions) {
+        let root = repo_root();
+        if !port_open(8000) {
+            kids.push(spawn_api_dev(&root)?);
+        }
+        if !port_open(3000) {
+            kids.push(spawn_web_dev(&root)?);
+        }
+    } else {
+        let sidecar = resource_sidecar(app)?;
+        if !port_open(8000) {
+            kids.push(spawn_api_release(&sidecar)?);
+        }
+        if !port_open(3000) {
+            kids.push(spawn_web_release(&sidecar)?);
+        }
+    }
+    drop(kids);
+
+    if !wait_for_port(8000, Duration::from_secs(45)) {
+        return Err("API did not become ready on :8000".into());
+    }
+    if !wait_for_port(3000, Duration::from_secs(90)) {
+        return Err("Web did not become ready on :3000".into());
+    }
+    Ok(())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let state = ServerState {
+        children: Mutex::new(Vec::new()),
+    };
+
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .manage(state)
+        .setup(|app| {
+            let handle = app.handle().clone();
+            thread::spawn(move || {
+                let state = handle.state::<ServerState>();
+                let result = start_servers(&handle, &state);
+                if let Some(window) = handle.get_webview_window("main") {
+                    match result {
+                        Ok(()) => {
+                            if let Ok(url) = Url::parse("http://127.0.0.1:3000/") {
+                                let _ = window.navigate(url);
+                            }
+                        }
+                        Err(err) => {
+                            let safe = err.replace('\\', "\\\\").replace('\'', "\\'");
+                            let _ = window.eval(&format!(
+                                "document.getElementById('status').textContent = 'Failed: {safe}'"
+                            ));
+                        }
+                    }
+                }
+            });
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { .. } = event {
+                let state = window.app_handle().state::<ServerState>();
+                shutdown_servers(&state);
+            }
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building Operate AI desktop")
+        .run(|app_handle, event| {
+            if let RunEvent::Exit = event {
+                let state = app_handle.state::<ServerState>();
+                shutdown_servers(&state);
+            }
+        });
+}

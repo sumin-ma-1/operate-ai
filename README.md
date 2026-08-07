@@ -19,7 +19,8 @@
 
 ## Download
 
-- **Editor:** clone this repo and run from source ([Run from source](#run-from-source)).
+- **Editor (desktop, Windows):** [Download `Operate-AI-windows-setup.exe`](https://github.com/sumin-ma-1/operate-ai/releases/latest) from GitHub Releases. Builds are not code-signed, so SmartScreen may warn (More info → Run anyway).
+- **Editor (from source):** clone this repo and run API + web ([Run from source](#run-from-source)), or `pnpm desktop:dev` for the Tauri window.
 - **Open Space:** browse shared workflows at [Open Space](https://oxide-optimum-rising-advertisement.trycloudflare.com/).
 
 ## How it works
@@ -117,6 +118,8 @@ Open [http://localhost:3000](http://localhost:3000) → **New Workflow** → edi
 ```bash
 pnpm dev:web        # :3000
 pnpm dev:api        # :8000
+pnpm desktop:dev    # Tauri window (starts API + web)
+pnpm desktop:build  # Windows NSIS with bundled API + web
 pnpm build:schema   # Shared TS types
 pnpm build:web      # Production build
 ```
@@ -146,8 +149,9 @@ HTTP endpoints: see [`apps/api/API.md`](apps/api/API.md).
 
 ```
 operate-ai/
-├── apps/web/                 # Visual editor
+├── apps/web/                 # Visual editor (Next.js)
 ├── apps/api/                 # Execution & persistence
+├── apps/desktop/             # Tauri desktop shell (Windows NSIS)
 ├── packages/workflow-schema/ # Shared workflow types
 ├── deploy/                   # Public Open Space Nginx + env + guide
 ├── docker-compose.yml        # Local Ollama

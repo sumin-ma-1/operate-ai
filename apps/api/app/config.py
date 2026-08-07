@@ -24,7 +24,14 @@ CORS_ORIGINS = [
     if origin.strip()
 ]
 
-DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
+def _resolve_data_root() -> Path:
+    override = (os.getenv("OPERATE_AI_DATA") or "").strip()
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parent.parent / "data"
+
+
+DATA_ROOT = _resolve_data_root()
 DATA_DIR = DATA_ROOT / "workflows"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 SECRETS_PATH = DATA_ROOT / "secrets.json"

@@ -152,20 +152,22 @@ export default function HomePage() {
               {workflows.map((workflow) => (
                 <Card
                   key={workflow.id}
-                  className="group flex h-full flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:bg-slate-800/70 hover:shadow-[0_0_20px_rgba(56,189,248,0.12)]"
+                  className="group flex h-full flex-col gap-3 !rounded-[1.75rem] !border-white/20 !bg-white/[0.08] !p-5 !shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition duration-300 hover:!border-white/35 hover:!bg-white/[0.12] hover:!shadow-[0_12px_40px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.22)]"
                 >
                   <div className="flex-1">
-                    <h2 className="text-lg font-semibold">{workflow.name}</h2>
+                    <h2 className="text-lg font-semibold text-white/95">
+                      {workflow.name}
+                    </h2>
                     {workflow.updatedAt &&
                       workflow.updatedAt !== workflow.createdAt && (
-                        <p className="mt-1 text-xs text-muted">
+                        <p className="mt-1 text-xs text-white/45">
                           Updated at{" "}
                           {new Date(workflow.updatedAt).toLocaleString()}
                         </p>
                       )}
                     {workflow.createdAt && (
                       <p
-                        className={`text-xs text-muted ${
+                        className={`text-xs text-white/45 ${
                           workflow.updatedAt &&
                           workflow.updatedAt !== workflow.createdAt
                             ? "mt-0.5"
@@ -180,14 +182,14 @@ export default function HomePage() {
                     <Link href={`/editor/${workflow.id}`}>
                       <Button
                         variant="secondary"
-                        className="!rounded-full px-4 transition duration-300 group-hover:!bg-slate-700 group-hover:shadow-[0_0_14px_rgba(56,189,248,0.28)] hover:-translate-y-0.5 hover:!bg-slate-700"
+                        className="!rounded-full !border-white/20 !bg-white/10 px-4 !text-white/90 backdrop-blur-md transition duration-300 hover:!-translate-y-0.5 hover:!border-white/35 hover:!bg-white/20"
                       >
                         Open
                       </Button>
                     </Link>
                     <Button
                       variant="ghost"
-                      className="!rounded-full px-4 !font-normal text-red-300/35 hover:!bg-red-500/15 hover:text-red-300/90"
+                      className="!rounded-full px-4 !font-normal text-red-300/40 hover:!bg-white/10 hover:text-red-200/90"
                       onClick={() => handleDelete(workflow.id)}
                     >
                       Delete

@@ -43,8 +43,6 @@ jobs:
 
       - name: Build Windows installer
         shell: pwsh
-        env:
-          CI: true
         run: ./packaging/build_windows.ps1
 
       - name: Stage setup.exe

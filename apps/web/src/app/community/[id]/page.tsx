@@ -7,7 +7,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GoogleSignInTrigger } from "@/components/auth/GoogleSignInTrigger";
 import { OpenSpaceShell } from "@/components/open-space/OpenSpaceShell";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import {
+  Card,
+  glassCardButtonClassName,
+  glassCardSurfaceClassName,
+} from "@/components/ui/Card";
 import { SpinnerIcon } from "@/components/ui/SpinnerIcon";
 import { Toast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/stores/authStore";
@@ -254,15 +258,15 @@ export default function CommunityDetailPage() {
       )}
 
       {post && (
-        <Card className="mt-6 border-white/10 bg-slate-900/55 backdrop-blur-sm">
-          <h1 className="text-2xl font-bold">{post.title}</h1>
-          <p className="mt-1 text-sm text-muted">
+        <Card className={`mt-6 ${glassCardSurfaceClassName}`}>
+          <h1 className="text-2xl font-bold text-white/95">{post.title}</h1>
+          <p className="mt-1 text-sm text-white/45">
             by {post.authorName} · {post.forkCount} forks ·{" "}
             {new Date(post.createdAt).toLocaleString()}
           </p>
 
           {post.description ? (
-            <p className="mt-4 whitespace-pre-wrap text-sm text-foreground/90">
+            <p className="mt-4 whitespace-pre-wrap text-sm text-white/70">
               {post.description}
             </p>
           ) : null}
@@ -272,7 +276,7 @@ export default function CommunityDetailPage() {
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-muted"
+                  className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 text-xs text-white/60"
                 >
                   {tag}
                 </span>
@@ -280,12 +284,14 @@ export default function CommunityDetailPage() {
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-lg border border-white/10 bg-background/40 p-4">
-            <h2 className="text-sm font-medium">Workflow summary</h2>
-            <p className="mt-1 text-xs text-muted">
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
+            <h2 className="text-sm font-medium text-white/90">
+              Workflow summary
+            </h2>
+            <p className="mt-1 text-xs text-white/45">
               {post.nodeCount} nodes · {post.workflow.edges.length} edges
             </p>
-            <ul className="mt-3 space-y-1 text-sm text-muted">
+            <ul className="mt-3 space-y-1 text-sm text-white/55">
               {nodeCounts.map(([type, count]) => (
                 <li key={type}>
                   {getNodeTypeLabel(type as WorkflowNodeType)}: {count}
@@ -294,10 +300,10 @@ export default function CommunityDetailPage() {
             </ul>
           </div>
 
-          <p className="mt-4 text-xs text-muted">
-            <strong className="font-medium text-foreground/80">Open as new</strong>{" "}
+          <p className="mt-4 text-xs text-white/45">
+            <strong className="font-medium text-white/75">Open as new</strong>{" "}
             creates a private workflow in your local editor.{" "}
-            <strong className="font-medium text-foreground/80">Star</strong>{" "}
+            <strong className="font-medium text-white/75">Star</strong>{" "}
             {usePublicShell
               ? "opens the local editor and saves a copy for Add (+) → Starred."
               : "keeps a copy for Add (+) → Starred so you can paste it onto an open canvas."}{" "}
@@ -308,7 +314,7 @@ export default function CommunityDetailPage() {
             <Button
               onClick={handleOpenAsNew}
               disabled={forking}
-              className="inline-flex items-center gap-1.5 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-5"
+              className="inline-flex items-center gap-1.5 !rounded-full !border-0 !bg-gradient-to-r !from-sky-600 !via-indigo-600 !to-indigo-700 px-5 shadow-[0_8px_24px_rgba(56,189,248,0.25)] transition duration-300 hover:!-translate-y-0.5"
             >
               {forking ? (
                 <SpinnerIcon size={18} />
@@ -322,7 +328,7 @@ export default function CommunityDetailPage() {
             <Button
               variant="secondary"
               onClick={handleToggleStar}
-              className="inline-flex items-center gap-1.5 !rounded-full px-4"
+              className={`inline-flex items-center gap-1.5 ${glassCardButtonClassName}`}
             >
               <span className="material-icons text-[18px] leading-none">
                 {usePublicShell || !starred ? "star_border" : "star"}

@@ -86,7 +86,7 @@ fn local_data_dir() -> PathBuf {
     PathBuf::from("operate-ai-data")
 }
 
-const WEB_BUNDLE_MARKER: &str = "0.1.4";
+const WEB_BUNDLE_MARKER: &str = "0.1.5";
 
 fn web_bundle_complete(dir: &Path) -> bool {
     dir.join("node.exe").exists()

@@ -132,6 +132,19 @@ try {
     Copy-Item -Recurse -Force $publicSrc $publicDst
   }
 
+  # Runtime must not load next.config.ts (Next would try to install TypeScript via pnpm).
+  $cfgTs = Join-Path $webStage "next.config.ts"
+  if (Test-Path $cfgTs) { Remove-Item -Force $cfgTs }
+  if (-not (Test-Path (Join-Path $webStage "next.config.mjs")) -and
+      -not (Test-Path (Join-Path $webStage "next.config.js"))) {
+    throw "staged web is missing next.config.mjs/js — next start would fail without TypeScript"
+  }
+  # Drop pnpm virtual-store metadata so Next never tries `pnpm add` against a Temp path.
+  foreach ($pnpmMeta in @(".modules.yaml", "pnpm-lock.yaml", "pnpm-workspace.yaml")) {
+    $p = Join-Path $webStage $pnpmMeta
+    if (Test-Path $p) { Remove-Item -Force $p }
+  }
+
   # Drop type/map junk from node_modules only (never touch .next).
   $stageNm = Join-Path $webStage "node_modules"
   if (Test-Path $stageNm) {

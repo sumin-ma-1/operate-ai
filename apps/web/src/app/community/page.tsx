@@ -5,7 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { OpenSpaceShell } from "@/components/open-space/OpenSpaceShell";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import {
+  Card,
+  glassCardButtonClassName,
+  glassCardClassName,
+} from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import {
   getPublicOpenSpaceHref,
@@ -154,19 +158,18 @@ export default function CommunityPage() {
           </p>
         )}
         {!loading && !error && posts.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {posts.map((post) => (
-              <Card
-                key={post.id}
-                className="flex h-full flex-col gap-3 border-white/10 bg-slate-900/50 backdrop-blur-sm transition duration-300 hover:border-sky-400/40 hover:bg-slate-800/70"
-              >
+              <Card key={post.id} className={glassCardClassName}>
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold">{post.title}</h2>
-                  <p className="mt-1 text-xs text-muted">
+                  <h2 className="text-lg font-semibold text-white/95">
+                    {post.title}
+                  </h2>
+                  <p className="mt-1 text-xs text-white/45">
                     by {post.authorName}
                   </p>
                   {post.description ? (
-                    <p className="mt-2 line-clamp-3 text-sm text-muted">
+                    <p className="mt-2 line-clamp-3 text-sm text-white/55">
                       {post.description}
                     </p>
                   ) : null}
@@ -175,7 +178,7 @@ export default function CommunityPage() {
                       {post.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-muted"
+                          className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[11px] text-white/60"
                         >
                           {tag}
                         </span>
@@ -183,16 +186,16 @@ export default function CommunityPage() {
                     </div>
                   ) : null}
                 </div>
-                <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                <div className="flex items-center justify-between gap-2 text-xs text-white/45">
                   <span>
                     {post.nodeCount} nodes · {post.forkCount} forks
                   </span>
                   <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                 </div>
-                <Link href={`/community/${post.id}`}>
+                <Link href={`/community/${post.id}`} className="mt-auto">
                   <Button
                     variant="secondary"
-                    className="inline-flex w-full items-center justify-center gap-1.5 !rounded-full"
+                    className={`inline-flex w-full items-center justify-center gap-1.5 ${glassCardButtonClassName}`}
                   >
                     <span className="material-icons text-[18px] leading-none">
                       visibility

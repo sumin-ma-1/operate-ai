@@ -7,9 +7,10 @@ const COMMUNITY_API_ORIGIN =
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@operate-ai/workflow-schema"],
-  // Avoid Next `output: "standalone"` here: on Windows without Developer Mode,
-  // standalone staging uses symlinks and fails with EPERM. Packaging uses
-  // `pnpm deploy` + `.next` instead (see packaging/build_windows.ps1).
+  // Docker/Linux public image needs standalone (see apps/web/Dockerfile).
+  // On Windows host builds, standalone staging uses symlinks and fails with
+  // EPERM without Developer Mode — packaging uses `pnpm deploy` instead.
+  ...(process.platform === "win32" ? {} : { output: "standalone" }),
   devIndicators: false,
   async rewrites() {
     return [

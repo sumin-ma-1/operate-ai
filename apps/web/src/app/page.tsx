@@ -6,7 +6,11 @@ import { useEffect, useState } from "react";
 import { ModelsModal } from "@/components/editor/ModelsModal";
 import { OpenSpaceLanding } from "@/components/open-space/OpenSpaceLanding";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import {
+  Card,
+  glassCardButtonClassName,
+  glassCardClassName,
+} from "@/components/ui/Card";
 import { RotatingTagline } from "@/components/home/RotatingTagline";
 import {
   getPublicOpenSpaceHref,
@@ -154,10 +158,7 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {workflows.map((workflow) => (
-                <Card
-                  key={workflow.id}
-                  className="group flex h-full flex-col gap-3 !rounded-[1.75rem] !border-white/20 !bg-white/[0.08] !p-5 !shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition duration-300 hover:!border-white/35 hover:!bg-white/[0.12] hover:!shadow-[0_12px_40px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.22)]"
-                >
+                <Card key={workflow.id} className={glassCardClassName}>
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-white/95">
                       {workflow.name}
@@ -186,7 +187,7 @@ export default function HomePage() {
                     <Link href={`/editor/${workflow.id}`}>
                       <Button
                         variant="secondary"
-                        className="!rounded-full !border-white/20 !bg-white/10 px-4 !text-white/90 backdrop-blur-md transition duration-300 hover:!-translate-y-0.5 hover:!border-white/35 hover:!bg-white/20"
+                        className={glassCardButtonClassName}
                       >
                         Open
                       </Button>

@@ -54,7 +54,7 @@ fn local_data_dir() -> PathBuf {
     PathBuf::from("operate-ai-data")
 }
 
-const WEB_BUNDLE_MARKER: &str = "0.1.3";
+const WEB_BUNDLE_MARKER: &str = "0.1.4";
 
 fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
     let dest = local_data_dir().join("web");

@@ -50,6 +50,13 @@ try {
   if (-not (Test-Path $nextDir)) {
     throw "Next build output missing at $nextDir"
   }
+  $builtRuntime = Join-Path $nextDir "server\webpack-runtime.js"
+  if (-not (Test-Path $builtRuntime)) {
+    throw "Next build missing server/webpack-runtime.js"
+  }
+  if ((Get-Content -LiteralPath $builtRuntime -Raw) -notmatch 'chunks/') {
+    throw "Next build webpack-runtime.js is corrupt (no chunks/ path) — free disk and rebuild"
+  }
 
   Write-Host "==> [2/4] stage web sidecar zip (pnpm deploy + node.exe)" -ForegroundColor Cyan
   if (Test-Path $Resources) {
@@ -107,7 +114,8 @@ try {
     cmd /c "rmdir /s /q `"$deployCache`""
   }
 
-  cmd /c "robocopy `"$deployTmp`" `"$webStage`" /E /XD cache /NFL /NDL /NJH /NJS /nc /ns /np"
+  # Never copy deploy's .next — it can be incomplete; we stage a fresh build below.
+  cmd /c "robocopy `"$deployTmp`" `"$webStage`" /E /XD cache .next /NFL /NDL /NJH /NJS /nc /ns /np"
   if ($LASTEXITCODE -ge 8) { throw "robocopy deploy→stage failed ($LASTEXITCODE)" }
 
   # Always use the freshly built .next (avoid nested .next/.next from Copy-Item).
@@ -124,10 +132,13 @@ try {
     Copy-Item -Recurse -Force $publicSrc $publicDst
   }
 
-  # Drop type/map junk that only deepens paths for the installer.
-  Get-ChildItem -LiteralPath $webStage -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Extension -in ".map", ".ts", ".mts", ".cts" -or $_.Name -like "*.d.ts" } |
-    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+  # Drop type/map junk from node_modules only (never touch .next).
+  $stageNm = Join-Path $webStage "node_modules"
+  if (Test-Path $stageNm) {
+    Get-ChildItem -LiteralPath $stageNm -Recurse -File -ErrorAction SilentlyContinue |
+      Where-Object { $_.Extension -in ".map", ".ts", ".mts", ".cts" -or $_.Name -like "*.d.ts" } |
+      ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+  }
 
   $nextBin = Join-Path $webStage "node_modules\next\dist\bin\next"
   if (-not (Test-Path $nextBin)) {
@@ -136,6 +147,14 @@ try {
   $styledJsx = Join-Path $webStage "node_modules\styled-jsx\package.json"
   if (-not (Test-Path $styledJsx)) {
     throw "styled-jsx missing after hoist — Next will fail to start"
+  }
+  $webpackRuntime = Join-Path $webStage ".next\server\webpack-runtime.js"
+  if (-not (Test-Path $webpackRuntime)) {
+    throw "webpack-runtime.js missing under staged .next"
+  }
+  $runtimeText = Get-Content -LiteralPath $webpackRuntime -Raw
+  if ($runtimeText -notmatch 'chunks/') {
+    throw "staged webpack-runtime.js looks corrupt (no chunks/ path) — rebuild web and retry"
   }
 
   $cache = Join-Path $Here ".cache"

@@ -12,6 +12,7 @@ import {
   getPublicOpenSpaceHref,
   isLocalEditorHost,
   isPublicOpenSpaceSite,
+  openExternalUrl,
 } from "@/lib/open-space-url";
 import { deleteWorkflow, fetchWorkflows } from "@/lib/workflow-api";
 import type { WorkflowSummary } from "@operate-ai/workflow-schema";
@@ -67,13 +68,14 @@ export default function HomePage() {
   const isEmpty = !loading && !error && workflows.length === 0;
   const publicOpenSpaceHref = getPublicOpenSpaceHref("/");
   const openSpaceHref = publicOpenSpaceHref || "/community";
-  const openSpaceProps = publicOpenSpaceHref
-    ? {
-        href: openSpaceHref,
-        target: "_blank" as const,
-        rel: "noopener noreferrer",
-      }
-    : { href: openSpaceHref };
+
+  const handleOpenSpace = () => {
+    if (publicOpenSpaceHref) {
+      void openExternalUrl(publicOpenSpaceHref);
+      return;
+    }
+    window.location.assign(openSpaceHref);
+  };
 
   return (
     <div className="space-backdrop min-h-screen">
@@ -91,7 +93,7 @@ export default function HomePage() {
         className="group fixed top-5 left-5 z-20 inline-flex !h-11 !w-11 items-center justify-center !rounded-full border-0 !bg-transparent !p-0 shadow-none hover:!bg-transparent hover:!opacity-100"
       >
         <span className="material-symbols-outlined text-[22px] leading-none text-white/55 transition duration-300 group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.45)]">
-          planet
+          orbit
         </span>
       </Button>
       <main
@@ -126,14 +128,16 @@ export default function HomePage() {
                 New Workflow
               </Button>
             </Link>
-            <a {...openSpaceProps}>
-              <Button className="inline-flex items-center gap-2 !rounded-full border-0 bg-gradient-to-r from-slate-500 via-teal-600 to-cyan-700 px-6 py-2.5 shadow-[0_0_24px_rgba(45,212,191,0.28),0_0_40px_rgba(8,145,178,0.18)] transition duration-300 hover:shadow-[0_0_32px_rgba(45,212,191,0.4),0_0_52px_rgba(8,145,178,0.28)] hover:!opacity-100">
-                <span className="material-icons text-[20px] leading-none">
-                  public
-                </span>
-                Open Space
-              </Button>
-            </a>
+            <Button
+              type="button"
+              onClick={handleOpenSpace}
+              className="inline-flex items-center gap-2 !rounded-full border-0 bg-gradient-to-r from-slate-500 via-teal-600 to-cyan-700 px-6 py-2.5 shadow-[0_0_24px_rgba(45,212,191,0.28),0_0_40px_rgba(8,145,178,0.18)] transition duration-300 hover:shadow-[0_0_32px_rgba(45,212,191,0.4),0_0_52px_rgba(8,145,178,0.28)] hover:!opacity-100"
+            >
+              <span className="material-icons text-[20px] leading-none">
+                public
+              </span>
+              Open Space
+            </Button>
           </div>
         </div>
 

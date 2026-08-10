@@ -13,6 +13,24 @@ export function getPublicOpenSpaceHref(path = "/"): string | null {
   return `${base}${normalized}`;
 }
 
+/**
+ * Open an http(s) URL in the system browser when running inside Tauri;
+ * otherwise use a normal new tab. Avoid nesting `<button>` inside `<a>`.
+ */
+export async function openExternalUrl(url: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  const tauri = (
+    window as Window & {
+      __TAURI__?: { opener?: { openUrl?: (u: string) => Promise<void> } };
+    }
+  ).__TAURI__;
+  if (tauri?.opener?.openUrl) {
+    await tauri.opener.openUrl(url);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 /** Local Operate AI editor base URL (for Open as new / import). */
 export function getLocalEditorBaseUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_LOCAL_EDITOR_URL || "").trim();

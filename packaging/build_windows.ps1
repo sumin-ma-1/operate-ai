@@ -190,6 +190,12 @@ try {
   Write-Host "==> [4/4] tauri build (nsis)" -ForegroundColor Cyan
   Push-Location $Desktop
   try {
+    # GitHub Actions sets CI=true; pnpm may then drop desktop devDependencies
+    # (@tauri-apps/cli). Force a full install and clear CI for this step.
+    Remove-Item Env:CI -ErrorAction SilentlyContinue
+    $env:CI = "false"
+    pnpm install --prod=false --filter @operate-ai/desktop... --config.confirmModulesPurge=false
+    if ($LASTEXITCODE -ne 0) { throw "desktop deps install failed" }
     pnpm exec tauri build --bundles nsis
     if ($LASTEXITCODE -ne 0) { throw "tauri build failed (exit $LASTEXITCODE)" }
   } finally {

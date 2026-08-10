@@ -54,7 +54,7 @@ fn local_data_dir() -> PathBuf {
     PathBuf::from("operate-ai-data")
 }
 
-const WEB_BUNDLE_MARKER: &str = "0.1.2";
+const WEB_BUNDLE_MARKER: &str = "0.1.3";
 
 fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
     let dest = local_data_dir().join("web");
@@ -339,9 +339,13 @@ pub fn run() {
                             }
                         }
                         Err(err) => {
-                            let safe = err.replace('\\', "\\\\").replace('\'', "\\'");
+                            let safe = err
+                                .replace('\\', "\\\\")
+                                .replace('\'', "\\'")
+                                .replace('\n', " ");
                             let _ = window.eval(&format!(
-                                "document.getElementById('status').textContent = 'Failed: {safe}'"
+                                "document.body.classList.add('is-error');\
+                                 document.getElementById('status').textContent = 'Failed: {safe}'"
                             ));
                         }
                     }

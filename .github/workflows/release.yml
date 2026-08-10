@@ -43,6 +43,9 @@ jobs:
 
       - name: Build Windows installer
         shell: pwsh
+        env:
+          # Actions sets CI=true by default; keep false so pnpm keeps @tauri-apps/cli.
+          CI: "false"
         run: ./packaging/build_windows.ps1
 
       - name: Stage setup.exe

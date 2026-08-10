@@ -21,10 +21,10 @@ import {
 } from "@/lib/community-local";
 import { getNodeTypeLabel } from "@/lib/node-labels";
 import {
-  getLocalEditorBaseUrl,
   getPublicOpenSpaceHref,
   isLocalEditorHost,
   isPublicOpenSpaceSite,
+  openInLocalEditor,
 } from "@/lib/open-space-url";
 import {
   deleteCommunityPost,
@@ -60,10 +60,47 @@ export default function CommunityDetailPage() {
     message: string;
     variant: "success" | "error";
     durationMs?: number;
-    actions?: Array<{ label: string; onClick: () => void; danger?: boolean }>;
+    actions?: Array<{
+      label: string;
+      onClick: () => void;
+      danger?: boolean;
+      primary?: boolean;
+    }>;
   } | null>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
+
+  const showStarredToast = useCallback(
+    (title?: string | null) => {
+      const label = title && title !== "1" ? title : null;
+      setToast({
+        message: label
+          ? `Starred: ${label}`
+          : "Starred ! Use Add (+) → Starred in the editor",
+        variant: "success",
+        durationMs: 0,
+        actions: [
+          {
+            label: "Okay",
+            onClick: () => setToast(null),
+          },
+          {
+            label: "Go to workflows",
+            primary: true,
+            onClick: () => {
+              setToast(null);
+              if (usePublicShell) {
+                openInLocalEditor("/");
+              } else {
+                router.push("/");
+              }
+            },
+          },
+        ],
+      });
+    },
+    [router, usePublicShell]
+  );
 
   useEffect(() => {
     if (bounceToPublic && publicPostHref) {
@@ -91,6 +128,19 @@ export default function CommunityDetailPage() {
     if (bounceToPublic) return;
     void load();
   }, [load, bounceToPublic]);
+
+  // After public Open Space → local editor star handoff, we return here with ?starred=
+  useEffect(() => {
+    if (bounceToPublic || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const starredParam = url.searchParams.get("starred");
+    if (!starredParam) return;
+    setStarred(true);
+    showStarredToast(starredParam === "1" ? null : starredParam);
+    url.searchParams.delete("starred");
+    const cleaned = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, "", cleaned);
+  }, [bounceToPublic, postId, showStarredToast]);
 
   const nodeCounts = useMemo(() => {
     if (!post) return [];
@@ -196,24 +246,20 @@ export default function CommunityDetailPage() {
   const handleOpenAsNew = async () => {
     setForking(true);
     setError(null);
-    // Do not probe localhost with fetch from public HTTPS — browsers block
-    // private-network requests, so a live editor looks "down". Top-level
-    // navigation to the local editor still works when it is running.
-    const localEditorBase = getLocalEditorBaseUrl();
-    const target = `${localEditorBase}/editor/import?postId=${encodeURIComponent(
-      postId
-    )}`;
-    window.location.assign(target);
+    // Prefer installed desktop app (operate-ai://); fall back to localhost.
+    openInLocalEditor(
+      `/editor/import?postId=${encodeURIComponent(postId)}`
+    );
   };
 
   const handleToggleStar = async () => {
     if (!post) return;
 
-    // Public Open Space → hand off to local editor (same idea as Open as new).
+    // Public Open Space → save star in the local editor / app, then return for toast.
     if (usePublicShell) {
-      const localEditorBase = getLocalEditorBaseUrl();
-      window.location.assign(
-        `${localEditorBase}/editor/star?postId=${encodeURIComponent(postId)}`
+      const returnTo = `${window.location.origin}${window.location.pathname}`;
+      openInLocalEditor(
+        `/editor/star?postId=${encodeURIComponent(postId)}&returnTo=${encodeURIComponent(returnTo)}`
       );
       return;
     }
@@ -232,10 +278,7 @@ export default function CommunityDetailPage() {
       authorName: post.authorName,
     });
     setStarred(true);
-    setToast({
-      message: "Starred ! Use Add (+) → Starred in the editor",
-      variant: "success",
-    });
+    showStarredToast(post.title);
   };
 
   const detail = (

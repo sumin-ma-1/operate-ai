@@ -12,11 +12,13 @@ import {
   glassCardClassName,
 } from "@/components/ui/Card";
 import { RotatingTagline } from "@/components/home/RotatingTagline";
+import { Toast } from "@/components/ui/Toast";
 import {
   getPublicOpenSpaceHref,
   isLocalEditorHost,
   isPublicOpenSpaceSite,
   openExternalUrl,
+  openInLocalEditor,
 } from "@/lib/open-space-url";
 import { deleteWorkflow, fetchWorkflows } from "@/lib/workflow-api";
 import type { WorkflowSummary } from "@operate-ai/workflow-schema";
@@ -27,6 +29,16 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [starFlashKey, setStarFlashKey] = useState(0);
   const [modelsOpen, setModelsOpen] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "success" | "error";
+    durationMs?: number;
+    actions?: Array<{
+      label: string;
+      onClick: () => void;
+      primary?: boolean;
+    }>;
+  } | null>(null);
 
   const isPublic = isPublicOpenSpaceSite();
 
@@ -35,6 +47,38 @@ export default function HomePage() {
     if (!isPublic && !isLocalEditorHost()) {
       window.location.replace("/open-space");
     }
+  }, [isPublic]);
+
+  useEffect(() => {
+    if (isPublic || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const starredParam = url.searchParams.get("starred");
+    if (!starredParam) return;
+    setStarFlashKey((key) => key + 1);
+    setToast({
+      message:
+        starredParam === "1"
+          ? "Starred ! Use Add (+) → Starred in the editor"
+          : `Starred: ${starredParam}`,
+      variant: "success",
+      durationMs: 0,
+      actions: [
+        {
+          label: "Okay",
+          onClick: () => setToast(null),
+        },
+        {
+          label: "Go to workflows",
+          primary: true,
+          onClick: () => {
+            setToast(null);
+            openInLocalEditor("/");
+          },
+        },
+      ],
+    });
+    url.searchParams.delete("starred");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, [isPublic]);
 
   const triggerStarFlash = () => {
@@ -208,6 +252,14 @@ export default function HomePage() {
       </main>
 
       <ModelsModal open={modelsOpen} onClose={() => setModelsOpen(false)} />
+      {toast ? (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          placement="center"
+          onClose={() => setToast(null)}
+        />
+      ) : null}
     </div>
   );
 }

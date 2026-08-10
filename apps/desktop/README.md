@@ -25,6 +25,10 @@ pnpm desktop:dev
 
 Uses the monorepo API venv and `next dev`. Closing the window stops processes it started (servers already on `:3000`/`:8000` are left alone).
 
+## Deep links
+
+Installed builds register the `operate-ai://` scheme on first launch (e.g. `operate-ai://editor/import?postId=…`). Public Open Space tries the app first, then falls back to `http://localhost:3000`.
+
 ## Windows installer (bundled API + web)
 
 From repo root:

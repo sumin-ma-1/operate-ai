@@ -7,6 +7,8 @@ export type ToastAction = {
   label: string;
   onClick: () => void;
   danger?: boolean;
+  /** Stronger filled style (e.g. primary CTA). */
+  primary?: boolean;
 };
 
 interface ToastProps {
@@ -114,7 +116,9 @@ export function Toast({
                     className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
                       action.danger
                         ? "bg-red-500/90 text-white hover:bg-red-500"
-                        : "border border-white/10 bg-white/5 text-foreground/85 hover:bg-white/10"
+                        : action.primary
+                          ? "bg-white/90 text-slate-950 hover:bg-white"
+                          : "border border-white/10 bg-white/5 text-foreground/85 hover:bg-white/10"
                     }`}
                     onClick={action.onClick}
                   >

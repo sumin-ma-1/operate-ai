@@ -38,6 +38,77 @@ export function getLocalEditorBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+/** Custom scheme registered by the Operate AI desktop app. */
+export const EDITOR_DEEP_LINK_SCHEME = "operate-ai";
+
+/** Build `operate-ai://editor/...` from a local path like `/editor/import?postId=1`. */
+export function getEditorDeepLink(pathnameWithQuery: string): string {
+  const path = pathnameWithQuery.startsWith("/")
+    ? pathnameWithQuery.slice(1)
+    : pathnameWithQuery;
+  return `${EDITOR_DEEP_LINK_SCHEME}://${path}`;
+}
+
+/** True when the page is running inside the Operate AI Tauri shell. */
+export function isRunningInsideTauri(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(
+    (window as Window & { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown })
+      .__TAURI__ ||
+      (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
+  );
+}
+
+/**
+ * Open a path in the local editor: prefer the installed desktop app via
+ * `operate-ai://…`, then fall back to the browser on localhost.
+ */
+export function openInLocalEditor(pathnameWithQuery: string): void {
+  if (typeof window === "undefined") return;
+  const path = pathnameWithQuery.startsWith("/")
+    ? pathnameWithQuery
+    : `/${pathnameWithQuery}`;
+
+  // Already inside the desktop shell (or local Next) — just navigate.
+  if (isRunningInsideTauri() || isLocalEditorHost()) {
+    window.location.assign(path);
+    return;
+  }
+
+  const httpUrl = `${getLocalEditorBaseUrl()}${path}`;
+  const deepUrl = getEditorDeepLink(path);
+
+  let settled = false;
+  const fallbackToHttp = () => {
+    if (settled) return;
+    settled = true;
+    window.removeEventListener("blur", onBlur);
+    window.location.assign(httpUrl);
+  };
+
+  const onBlur = () => {
+    // OS handed focus to the app — don't also open the browser.
+    settled = true;
+    window.removeEventListener("blur", onBlur);
+  };
+
+  window.addEventListener("blur", onBlur);
+  try {
+    window.location.href = deepUrl;
+  } catch {
+    fallbackToHttp();
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (!settled && document.visibilityState === "visible") {
+      fallbackToHttp();
+    } else {
+      window.removeEventListener("blur", onBlur);
+    }
+  }, 700);
+}
+
 /**
  * Probe whether the local editor responds.
  *

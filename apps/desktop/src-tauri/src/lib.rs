@@ -10,6 +10,112 @@ use tauri::{AppHandle, Manager, RunEvent, Url, WindowEvent};
 
 struct ServerState {
     children: Mutex<Vec<Child>>,
+    pending_url: Mutex<Option<Url>>,
+}
+
+fn deep_link_to_editor(url: &str) -> Option<Url> {
+    let parsed = Url::parse(url).ok()?;
+    if parsed.scheme() != "operate-ai" {
+        return None;
+    }
+    // operate-ai://editor/import?postId=1 → http://127.0.0.1:3000/editor/import?postId=1
+    let host = parsed.host_str().unwrap_or("");
+    let path = parsed.path();
+    let local_path = if host.is_empty() {
+        if path.is_empty() {
+            "/".to_string()
+        } else {
+            path.to_string()
+        }
+    } else if path.is_empty() || path == "/" {
+        format!("/{host}")
+    } else {
+        format!("/{host}{path}")
+    };
+    let mut local = format!("http://127.0.0.1:3000{local_path}");
+    if let Some(q) = parsed.query() {
+        local.push('?');
+        local.push_str(q);
+    }
+    Url::parse(&local).ok()
+}
+
+fn focus_and_navigate(app: &AppHandle, url: Url) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_focus();
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.navigate(url);
+    }
+}
+
+fn take_or_set_pending(app: &AppHandle, url: Url) {
+    if port_open(3000) {
+        focus_and_navigate(app, url);
+        return;
+    }
+    if let Ok(mut pending) = app.state::<ServerState>().pending_url.lock() {
+        *pending = Some(url);
+    }
+}
+
+/// Register `operate-ai://` via HKCU so Open Space can hand off to the installed app.
+#[cfg(windows)]
+fn register_operate_ai_protocol() {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    let exe = exe.display().to_string();
+    let command = format!("\"{exe}\" \"%1\"");
+    let _ = Command::new("reg")
+        .args([
+            "add",
+            r"HKCU\Software\Classes\operate-ai",
+            "/ve",
+            "/d",
+            "URL:Operate AI Protocol",
+            "/f",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("reg")
+        .args([
+            "add",
+            r"HKCU\Software\Classes\operate-ai",
+            "/v",
+            "URL Protocol",
+            "/d",
+            "",
+            "/f",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("reg")
+        .args([
+            "add",
+            r"HKCU\Software\Classes\operate-ai\shell\open\command",
+            "/ve",
+            "/d",
+            &command,
+            "/f",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
+
+#[cfg(not(windows))]
+fn register_operate_ai_protocol() {}
+
+fn ingest_cli_deep_links(app: &AppHandle) {
+    for arg in std::env::args().skip(1) {
+        if let Some(url) = deep_link_to_editor(&arg) {
+            take_or_set_pending(app, url);
+            break;
+        }
+    }
 }
 
 fn repo_root() -> PathBuf {
@@ -377,12 +483,29 @@ fn start_servers(app: &AppHandle, state: &ServerState) -> Result<(), String> {
 pub fn run() {
     let state = ServerState {
         children: Mutex::new(Vec::new()),
+        pending_url: Mutex::new(None),
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            for arg in argv {
+                if let Some(url) = deep_link_to_editor(&arg) {
+                    take_or_set_pending(app, url);
+                    return;
+                }
+            }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+                let _ = window.show();
+                let _ = window.unminimize();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .manage(state)
         .setup(|app| {
+            register_operate_ai_protocol();
+            ingest_cli_deep_links(app.handle());
+
             let handle = app.handle().clone();
             thread::spawn(move || {
                 let state = handle.state::<ServerState>();
@@ -390,9 +513,16 @@ pub fn run() {
                 if let Some(window) = handle.get_webview_window("main") {
                     match result {
                         Ok(()) => {
-                            if let Ok(url) = Url::parse("http://127.0.0.1:3000/") {
-                                let _ = window.navigate(url);
-                            }
+                            let pending = state
+                                .pending_url
+                                .lock()
+                                .ok()
+                                .and_then(|mut p| p.take());
+                            let target = pending.unwrap_or_else(|| {
+                                Url::parse("http://127.0.0.1:3000/")
+                                    .expect("static editor url")
+                            });
+                            let _ = window.navigate(target);
                         }
                         Err(err) => {
                             let safe = err

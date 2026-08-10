@@ -63,6 +63,13 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
   const [toast, setToast] = useState<{
     message: string;
     variant: "success" | "error";
+    durationMs?: number;
+    actions?: Array<{
+      label: string;
+      onClick: () => void;
+      primary?: boolean;
+      danger?: boolean;
+    }>;
   } | null>(null);
 
   const clearToast = useCallback(() => setToast(null), []);
@@ -232,18 +239,38 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     }
   };
 
-  const handleDeleteOllama = async (name: string) => {
-    if (!confirm(`Delete Ollama model "${name}"?`)) return;
-    setError(null);
-    try {
-      await deleteOllamaModel(name);
-      showSavedToast(`Deleted ${name}`);
-      await refresh();
-    } catch (err) {
-      const text = err instanceof Error ? err.message : "Delete failed";
-      setError(text);
-      showErrorToast(text);
-    }
+  const handleDeleteOllama = (name: string) => {
+    setToast({
+      message: `Delete Ollama model "${name}"?`,
+      variant: "error",
+      durationMs: 0,
+      actions: [
+        {
+          label: "Cancel",
+          onClick: () => setToast(null),
+        },
+        {
+          label: "Delete",
+          danger: true,
+          onClick: () => {
+            setToast(null);
+            setError(null);
+            void (async () => {
+              try {
+                await deleteOllamaModel(name);
+                showSavedToast(`Deleted ${name}`);
+                await refresh();
+              } catch (err) {
+                const text =
+                  err instanceof Error ? err.message : "Delete failed";
+                setError(text);
+                showErrorToast(text);
+              }
+            })();
+          },
+        },
+      ],
+    });
   };
 
   return (
@@ -519,6 +546,8 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
         message={toast.message}
         variant={toast.variant}
         placement="center"
+        durationMs={toast.durationMs}
+        actions={toast.actions}
         onClose={clearToast}
       />
     ) : null}

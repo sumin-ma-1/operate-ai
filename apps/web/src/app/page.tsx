@@ -37,6 +37,7 @@ export default function HomePage() {
       label: string;
       onClick: () => void;
       primary?: boolean;
+      danger?: boolean;
     }>;
   } | null>(null);
 
@@ -103,10 +104,29 @@ export default function HomePage() {
     void loadWorkflows();
   }, [isPublic]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this workflow?")) return;
-    await deleteWorkflow(id);
-    await loadWorkflows();
+  const handleDelete = (id: string) => {
+    setToast({
+      message: "Delete this workflow?",
+      variant: "error",
+      durationMs: 0,
+      actions: [
+        {
+          label: "Cancel",
+          onClick: () => setToast(null),
+        },
+        {
+          label: "Delete",
+          danger: true,
+          onClick: () => {
+            setToast(null);
+            void (async () => {
+              await deleteWorkflow(id);
+              await loadWorkflows();
+            })();
+          },
+        },
+      ],
+    });
   };
 
   if (isPublic) {
@@ -257,6 +277,8 @@ export default function HomePage() {
           message={toast.message}
           variant={toast.variant}
           placement="center"
+          durationMs={toast.durationMs}
+          actions={toast.actions}
           onClose={() => setToast(null)}
         />
       ) : null}

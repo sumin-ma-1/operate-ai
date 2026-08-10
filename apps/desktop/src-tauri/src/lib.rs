@@ -34,6 +34,38 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
     false
 }
 
+/// Best-effort: free a local port so a stale/broken Next process cannot block re-extract.
+fn kill_port_listeners(port: u16) {
+    #[cfg(windows)]
+    {
+        let _ = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!(
+                    "Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | \
+                     ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+                ),
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = Command::new("sh")
+            .args([
+                "-c",
+                &format!("lsof -ti tcp:{port} | xargs -r kill -9"),
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    // Give the OS a moment to release file locks under %LOCALAPPDATA%\OperateAI\web.
+    thread::sleep(Duration::from_millis(500));
+}
+
 #[cfg(windows)]
 fn apply_no_window(cmd: &mut Command) {
     use std::os::windows::process::CommandExt;
@@ -56,13 +88,20 @@ fn local_data_dir() -> PathBuf {
 
 const WEB_BUNDLE_MARKER: &str = "0.1.4";
 
+fn web_bundle_complete(dir: &Path) -> bool {
+    dir.join("node.exe").exists()
+        && dir.join("package.json").exists()
+        && dir.join("node_modules/next/dist/bin/next").exists()
+        && (dir.join(".next/static").is_dir() || dir.join("server.js").exists())
+}
+
 fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
     let dest = local_data_dir().join("web");
     let marker = dest.join(".bundle-ok");
     let marker_ok = std::fs::read_to_string(&marker)
         .map(|s| s.trim() == WEB_BUNDLE_MARKER)
         .unwrap_or(false);
-    if marker_ok && dest.join("node.exe").exists() {
+    if marker_ok && web_bundle_complete(&dest) {
         return Ok(dest);
     }
 
@@ -70,30 +109,39 @@ fn ensure_web_dir(sidecar: &Path) -> Result<PathBuf, String> {
     if !zip.exists() {
         // Dev-style layout: unzipped web folder next to api.
         let loose = sidecar.join("web");
-        if loose.join("node.exe").exists() {
+        if web_bundle_complete(&loose) {
             return Ok(loose);
         }
         return Err(format!("Bundled web.zip not found at {}", zip.display()));
     }
 
+    // Incomplete caches are often still "serving" on :3000 and lock files on Windows.
+    kill_port_listeners(3000);
     if dest.exists() {
         let _ = std::fs::remove_dir_all(&dest);
     }
     std::fs::create_dir_all(&dest).map_err(|e| format!("create web dir: {e}"))?;
 
-    let status = Command::new("tar")
+    let output = Command::new("tar")
         .args([
             "-xf",
             zip.to_str().ok_or("web.zip path is not valid UTF-8")?,
             "-C",
             dest.to_str().ok_or("web dest path is not valid UTF-8")?,
         ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .output()
         .map_err(|e| format!("Failed to extract web.zip (is tar available?): {e}"))?;
-    if !status.success() {
-        return Err("tar failed to extract web.zip".into());
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        let hint = err.lines().next().unwrap_or("unknown tar error");
+        let _ = std::fs::remove_dir_all(&dest);
+        return Err(format!("tar failed to extract web.zip — {hint}"));
+    }
+    if !web_bundle_complete(&dest) {
+        let _ = std::fs::remove_dir_all(&dest);
+        return Err(
+            "web.zip extracted but bundle is incomplete (missing Next/static assets)".into(),
+        );
     }
 
     std::fs::write(&marker, WEB_BUNDLE_MARKER.as_bytes())
@@ -266,7 +314,15 @@ fn shutdown_servers(state: &ServerState) {
 }
 
 fn start_servers(app: &AppHandle, state: &ServerState) -> Result<(), String> {
-    if port_open(8000) && port_open(3000) {
+    // In release, never trust an already-open :3000 unless the on-disk web bundle is complete
+    // (a half-extracted / wiped cache looks unstyled or "weird").
+    if cfg!(not(debug_assertions)) {
+        let sidecar = resource_sidecar(app)?;
+        let web_dir = ensure_web_dir(&sidecar)?;
+        if port_open(8000) && port_open(3000) && web_bundle_complete(&web_dir) {
+            return Ok(());
+        }
+    } else if port_open(8000) && port_open(3000) {
         return Ok(());
     }
 

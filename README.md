@@ -21,7 +21,7 @@
 
 - **Editor (desktop, Windows):** [Download `Operate-AI-windows-setup.exe`](https://github.com/sumin-ma-1/operate-ai/releases/latest) from GitHub Releases. Builds are not code-signed, so SmartScreen may warn (More info → Run anyway).
 - **Editor (from source):** clone this repo and run API + web ([Run from source](#run-from-source)), or `pnpm desktop:dev` for the Tauri window.
-- **Open Space:** browse shared workflows at [Open Space](https://oxide-optimum-rising-advertisement.trycloudflare.com/).
+- **Open Space:** browse shared workflows at [Open Space](https://pin-upcoming-putting-spider.trycloudflare.com/).
 
 ## How it works
 

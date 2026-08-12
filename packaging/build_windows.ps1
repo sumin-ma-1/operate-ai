@@ -16,6 +16,12 @@
 param()
 $ErrorActionPreference = "Stop"
 
+# Cursor / CI shells often miss User PATH (cargo, rustc).
+$machine = [Environment]::GetEnvironmentVariable("Path", "Machine")
+$user = [Environment]::GetEnvironmentVariable("Path", "User")
+$cargoBin = Join-Path $env:USERPROFILE ".cargo\bin"
+$env:Path = (@($cargoBin, $machine, $user, $env:Path) | Where-Object { $_ }) -join ";"
+
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = Split-Path -Parent $Here
 $Desktop = Join-Path $Root "apps\desktop"
